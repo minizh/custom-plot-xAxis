@@ -37,9 +37,12 @@
       :style="{ display: 'flex' }"
     >
       <div
-        class="table-cell-div"
         :style="{
-          width: `${tablePosition.marginLeft}px`
+          width: `${tablePosition.marginLeft}px`,
+          height: `${textDivStyle.height}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }"
       >
         {{ item.label }}
@@ -121,10 +124,22 @@ const setTablePosition = (chart) => {
   const center2 = chart.convertToPixel({ xAxisIndex: 0 }, 1)
   const tranformPx = getConfiguredGridPx(chart, 0, 'bottom')
 
+  // 处理只有一条数据的情况
+  let width = center2 - center1
+  let marginLeft = left - width / 2
+  if (visibleData.value?.categories?.length === 1 || !center2) {
+    // 只有一条数据时，使用 grid 的宽度作为列宽，从 grid 左边缘开始
+    const gridLeft = getConfiguredGridPx(chart, 0, 'left')
+    const gridRight = getConfiguredGridPx(chart, 0, 'right')
+    const chartWidth = chart.getDom().clientWidth
+    width = chartWidth - gridLeft - gridRight
+    marginLeft = gridLeft
+  }
+
   console.log(tranformPx)
   tablePosition.value = {
-    width: center2 - center1,
-    marginLeft: left - (center2 - center1) / 2,
+    width: width,
+    marginLeft: marginLeft,
     transform: tranformPx
   }
 }
