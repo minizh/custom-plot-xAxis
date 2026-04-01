@@ -4,7 +4,7 @@
       transform: `translateY(-${tablePosition.transform}px)`
     }"
   >
-    <div v-if="chartData?.categories?.length" :style="{ display: 'flex' }">
+    <div v-if="visibleData?.categories?.length" :style="{ display: 'flex' }">
       <div
         :style="{
           display: 'flex',
@@ -12,8 +12,8 @@
         }"
       >
         <div
-          v-for="item in chartData?.categories || []"
-          :key="item"
+          v-for="(item, index) in visibleData.categories"
+          :key="`header-${item}-${index}`"
           class="table-cell-div"
           :style="{
             width: `${tablePosition.width}px`,
@@ -46,8 +46,8 @@
       </div>
       <div :style="{ display: 'flex' }">
         <div
-          v-for="(category, index) in chartData?.categories || []"
-          :key="category"
+          v-for="(category, index) in visibleData?.categories || []"
+          :key="`cell-${category}-${item.value}-${index}`"
           class="table-cell-div"
           :style="{
             width: `${tablePosition.width}px`,
@@ -55,7 +55,7 @@
           }"
         >
           <TextDiv
-            :text="String(chartData.values?.[index]?.[item.value] || '')"
+            :text="String(visibleData.values?.[index]?.[item.value] || '')"
             :layout="textDivStyle.layout"
             :width="tablePosition.width"
             :height="textDivStyle.height"
@@ -92,11 +92,14 @@ const tablePosition = ref({
   transform: 0
 })
 
+const visibleData = ref(null)
+
 const textDivStyle = {
   layout: 'vertical',
   height: 80,
   fontSize: 12
 }
+
 const hideChartXAxis = (chart) => {
   if (chart) {
     chart.setOption({
@@ -126,20 +129,64 @@ const setTablePosition = (chart) => {
   }
 }
 
+const updateVisibleData = () => {
+  if (!props.chart || !props.chartData?.categories?.length) {
+    visibleData.value = props.chartData
+    return
+  }
+
+  const opt = props.chart.getOption()
+  const dz = opt.dataZoom?.[0]
+
+  if (!dz || dz.start == null || dz.end == null) {
+    visibleData.value = props.chartData
+  } else {
+    const start = dz.start
+    const end = dz.end
+    const total = props.chartData.categories.length
+
+    const startIndex = Math.max(0, Math.round((start / 100) * (total - 1)))
+    const endIndex = Math.min(total - 1, Math.round((end / 100) * (total - 1)))
+
+    visibleData.value = {
+      categories: props.chartData.categories.slice(startIndex, endIndex + 1),
+      values: props.chartData.values.slice(startIndex, endIndex + 1)
+    }
+  }
+}
+
+const syncTable = () => {
+  updateVisibleData()
+  if (props.chart && visibleData.value?.categories?.length) {
+    hideChartXAxis(props.chart)
+    setTablePosition(props.chart)
+  } else {
+    tablePosition.value = {
+      marginLeft: 0,
+      width: 0,
+      transform: 0
+    }
+  }
+}
+
 watch(
-  () => [props.chart, props.chartData, props.headers],
+  () => props.chart,
+  (chart, oldChart, onCleanup) => {
+    if (chart) {
+      chart.on('dataZoom', syncTable)
+      syncTable()
+      onCleanup(() => {
+        chart.off('dataZoom', syncTable)
+      })
+    }
+  }
+)
+
+watch(
+  () => [props.chartData, props.headers],
   () => {
     console.log(props.chartData)
-    if (props.chart && props.chartData?.categories?.length) {
-      hideChartXAxis(props.chart)
-      setTablePosition(props.chart)
-    } else {
-      tablePosition.value = {
-        marginLeft: 0,
-        width: 0,
-        transform: 0
-      }
-    }
+    syncTable()
   },
   {
     immediate: true

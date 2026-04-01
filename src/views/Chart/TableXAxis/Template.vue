@@ -21,7 +21,7 @@ const chartRef = ref(null)
 const chartData = ref()
 const chartInstance = ref()
 
-// 生成10条随机数据
+// 生成30条随机数据
 const generateData = () => {
   const categories = []
   const values = []
