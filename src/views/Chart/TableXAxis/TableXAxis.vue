@@ -1,7 +1,7 @@
 <template>
   <div
     :style="{
-      transform: `translateY(-${tablePosition.transform}px)`
+      position: 'relative'
     }"
   >
     <div v-if="visibleData?.categories?.length" :style="{ display: 'flex' }">
@@ -80,8 +80,8 @@ import { ref, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
-    headers?: string[]
-    chartData?: object
+    headers?: { value: string; label: string }[]
+    chartData?: { categories: string[]; values: any[] }
     chart?: any
   }>(),
   {
@@ -91,15 +91,14 @@ const props = withDefaults(
 
 const tablePosition = ref({
   marginLeft: 0,
-  width: 0,
-  transform: 0
+  width: 0
 })
 
 const visibleData = ref(null)
 
 const textDivStyle = {
-  layout: 'vertical',
-  height: 80,
+  layout: 'horizontal',
+  height: 32,
   fontSize: 12
 }
 
@@ -122,7 +121,6 @@ const setTablePosition = (chart) => {
   const { left } = point
   const center1 = chart.convertToPixel({ xAxisIndex: 0 }, 0)
   const center2 = chart.convertToPixel({ xAxisIndex: 0 }, 1)
-  const tranformPx = getConfiguredGridPx(chart, 0, 'bottom')
 
   // 处理只有一条数据的情况
   let width = center2 - center1
@@ -136,11 +134,9 @@ const setTablePosition = (chart) => {
     marginLeft = gridLeft
   }
 
-  console.log(tranformPx)
   tablePosition.value = {
     width: width,
-    marginLeft: marginLeft,
-    transform: tranformPx
+    marginLeft: marginLeft
   }
 }
 
@@ -178,8 +174,7 @@ const syncTable = () => {
   } else {
     tablePosition.value = {
       marginLeft: 0,
-      width: 0,
-      transform: 0
+      width: 0
     }
   }
 }

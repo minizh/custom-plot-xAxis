@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import GroupXAxis from '../views/Chart/GroupXAxis/Template.vue'
 import TableXAxis from '../views/Chart/TableXAxis/Template.vue'
+import CombinedXAxis from '../views/Chart/CombinedXAxis/Template.vue'
 
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
@@ -35,6 +36,12 @@ const routes = [
         name: 'TableXAxis',
         component: TableXAxis,
         meta: { title: '表格X轴' }
+      },
+      {
+        path: 'combined-x-axis',
+        name: 'CombinedXAxis',
+        component: CombinedXAxis,
+        meta: { title: '组合X轴' }
       }
     ]
   }

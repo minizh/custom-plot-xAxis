@@ -1,11 +1,10 @@
 <template>
   <div
     v-if="xAxisPosition.width > 0 && groupByData.length > 0"
+    class="group-x-axis"
     :style="{
-      position: 'relative',
-      left: `${xAxisPosition.left}px`,
-      width: `${xAxisPosition.width}px`,
-      transform: `translateY(-${xAxisPosition.transform}px)`
+      marginLeft: `${xAxisPosition.left}px`,
+      width: `${xAxisPosition.width}px`
     }"
   >
     <div v-for="(data, index) in groupByData" :key="index">
@@ -13,7 +12,7 @@
         v-if="data.length > 0"
         class="x-axis-item"
         :style="{
-          gap: `${(1 / (showAxisCount - 1 || 1)) * 100}%`
+          gap: showAxisCount <= 1 ? '0%' : `${(1 / (showAxisCount - 1)) * 100}%`
         }"
       >
         <div
@@ -21,7 +20,7 @@
           :key="item.value"
           class="div-group"
           :style="{
-            flex: `0 0 ${((item.count - 1) / (showAxisCount - 1)) * 100}%`
+            flex: showAxisCount <= 1 ? '0 0 100%' : `0 0 ${((item.count - 1) / (showAxisCount - 1)) * 100}%`
           }"
         >
           <div class="div-group-line" style="width: 100%"></div>
@@ -58,9 +57,7 @@ const props = withDefaults(
 
 const xAxisPosition = reactive({
   width: 0,
-  left: 0,
-  top: 0,
-  transform: 0
+  left: 0
 })
 const groupByData = ref([])
 const showAxisCount = ref()
@@ -87,11 +84,21 @@ const setXAxisPosition = () => {
   if (!props.chart) return
   // 判断是否显示
   const { point } = getXAxisVisibleDomRange(props.chart, 0)
-  const tranformPx = getConfiguredGridPx(props.chart, 0, 'bottom')
 
-  xAxisPosition.left = point.left
-  xAxisPosition.width = point.width
-  xAxisPosition.transform = tranformPx
+  let width = point.width
+  let left = point.left
+
+  // 处理只有一条数据的情况
+  if (props.chartData?.length === 1 || width === 0) {
+    const gridLeft = getConfiguredGridPx(props.chart, 0, 'left')
+    const gridRight = getConfiguredGridPx(props.chart, 0, 'right')
+    const chartWidth = props.chart.getDom().clientWidth
+    width = chartWidth - gridLeft - gridRight
+    left = gridLeft
+  }
+
+  xAxisPosition.left = left
+  xAxisPosition.width = width
 }
 
 const hideChartXAxis = () => {
@@ -106,17 +113,57 @@ const hideChartXAxis = () => {
   }
 }
 
+const updateVisibleData = () => {
+  if (!props.chart || !props.chartData?.length) {
+    return props.chartData || []
+  }
+
+  const opt = props.chart.getOption()
+  const dz = opt.dataZoom?.[0]
+
+  if (!dz || dz.start == null || dz.end == null) {
+    return props.chartData
+  }
+
+  const start = dz.start
+  const end = dz.end
+  const total = props.chartData.length
+
+  const startIndex = Math.max(0, Math.round((start / 100) * (total - 1)))
+  const endIndex = Math.min(total - 1, Math.round((end / 100) * (total - 1)))
+
+  return props.chartData.slice(startIndex, endIndex + 1)
+}
+
+const syncGroupXAxis = () => {
+  if (props.chart && props.chartData?.length) {
+    hideChartXAxis()
+    setXAxisPosition()
+    const visibleData = updateVisibleData()
+    setGroupByDataFn(visibleData)
+    showAxisCount.value = visibleData.length
+  } else {
+    groupByData.value = []
+  }
+}
+
 watch(
-  () => [props.chart, props.chartData, props.groupBy, props.sortBy],
-  () => {
-    if (props.chart && props.chartData?.length) {
-      hideChartXAxis()
-      setXAxisPosition()
-      setGroupByDataFn(props.chartData)
-      showAxisCount.value = props.chartData.length
-    } else {
-      groupByData.value = []
+  () => props.chart,
+  (chart, oldChart, onCleanup) => {
+    if (chart) {
+      chart.on('dataZoom', syncGroupXAxis)
+      syncGroupXAxis()
+      onCleanup(() => {
+        chart.off('dataZoom', syncGroupXAxis)
+      })
     }
+  }
+)
+
+watch(
+  () => [props.chartData, props.groupBy, props.sortBy],
+  () => {
+    syncGroupXAxis()
   },
   {
     immediate: true
@@ -125,14 +172,9 @@ watch(
 </script>
 
 <style scoped>
-.chart-container {
-  padding: 20px;
-}
-
-.chart {
-  width: 100%;
-  height: 500px;
-  min-height: 400px;
+.group-x-axis {
+  position: relative;
+  box-sizing: border-box;
 }
 
 .x-axis-item {
