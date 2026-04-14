@@ -16,16 +16,16 @@
           :key="`header-${item}-${index}`"
           class="table-cell-div"
           :style="{
-            width: `${tablePosition.width}px`,
-            height: `${textDivStyle.height}px`
+            width: `${tablePosition.width}px`
           }"
         >
           <TextDiv
             :text="item"
-            :layout="textDivStyle.layout"
+            :layout="categoryLayout"
             :width="tablePosition.width"
-            :height="textDivStyle.height"
+            :height="32"
             :fontSize="textDivStyle.fontSize"
+            :tiltAngle="categoryTiltAngle"
           />
         </div>
       </div>
@@ -37,15 +37,19 @@
       :style="{ display: 'flex' }"
     >
       <div
+        class="table-cell-div table-label-cell"
         :style="{
-          width: `${tablePosition.marginLeft}px`,
-          height: `${textDivStyle.height}px`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          width: `${tablePosition.marginLeft}px`
         }"
       >
-        {{ item.label }}
+        <TextDiv
+          :text="item.label"
+          :layout="getHeaderLayout(item.value)"
+          :width="tablePosition.marginLeft"
+          :height="32"
+          :fontSize="textDivStyle.fontSize"
+          :tiltAngle="getHeaderTiltAngle(item.value)"
+        />
       </div>
       <div :style="{ display: 'flex' }">
         <div
@@ -53,16 +57,16 @@
           :key="`cell-${category}-${item.value}-${index}`"
           class="table-cell-div"
           :style="{
-            width: `${tablePosition.width}px`,
-            height: `${textDivStyle.height}px`
+            width: `${tablePosition.width}px`
           }"
         >
           <TextDiv
             :text="String(visibleData.values?.[index]?.[item.value] || '')"
-            :layout="textDivStyle.layout"
+            :layout="getHeaderLayout(item.value)"
             :width="tablePosition.width"
-            :height="textDivStyle.height"
+            :height="32"
             :fontSize="textDivStyle.fontSize"
+            :tiltAngle="getHeaderTiltAngle(item.value)"
           />
         </div>
       </div>
@@ -76,16 +80,26 @@ import {
   getConfiguredGridPx,
   getXAxisVisibleDomRange
 } from '@/utils/chart-util'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const props = withDefaults(
   defineProps<{
     headers?: { value: string; label: string }[]
     chartData?: { categories: string[]; values: any[] }
     chart?: any
+    labelLayout?: 'horizontal' | 'vertical' | 'tilted'
+    labelTiltAngle?: number
+    categoryLayout?: 'horizontal' | 'vertical' | 'tilted'
+    categoryTiltAngle?: number
+    headerLayouts?: { [key: string]: { layout?: 'horizontal' | 'vertical' | 'tilted'; tiltAngle?: number } }
   }>(),
   {
-    headers: () => []
+    headers: () => [],
+    labelLayout: 'horizontal',
+    labelTiltAngle: 45,
+    categoryLayout: 'horizontal',
+    categoryTiltAngle: 45,
+    headerLayouts: () => ({})
   }
 )
 
@@ -96,10 +110,24 @@ const tablePosition = ref({
 
 const visibleData = ref(null)
 
-const textDivStyle = {
-  layout: 'horizontal',
-  height: 32,
+const textDivStyle = computed(() => ({
   fontSize: 12
+}))
+
+// 获取单个 header 的布局配置
+const getHeaderLayout = (headerValue: string) => {
+  if (props.headerLayouts && props.headerLayouts[headerValue]) {
+    return props.headerLayouts[headerValue].layout || props.labelLayout
+  }
+  return props.labelLayout
+}
+
+// 获取单个 header 的倾斜角度
+const getHeaderTiltAngle = (headerValue: string) => {
+  if (props.headerLayouts && props.headerLayouts[headerValue]) {
+    return props.headerLayouts[headerValue].tiltAngle ?? props.labelTiltAngle
+  }
+  return props.labelTiltAngle
 }
 
 const hideChartXAxis = (chart) => {
@@ -210,5 +238,9 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.table-label-cell {
+  overflow: hidden;
 }
 </style>

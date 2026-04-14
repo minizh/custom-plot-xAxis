@@ -24,8 +24,15 @@
           }"
         >
           <div class="div-group-line" style="width: 100%"></div>
-          <div class="div-center-text" style="width: 100%">
-            <span class="div-center-text-span">
+          <div
+            class="div-center-text"
+            :class="`layout-${labelLayout}`"
+            :style="{
+              width: '100%',
+              transform: labelLayout === 'tilted' ? `rotate(-${labelTiltAngle}deg)` : undefined
+            }"
+          >
+            <span class="div-center-text-span" :title="item.value">
               {{ item.value }}
             </span>
           </div>
@@ -49,9 +56,13 @@ const props = withDefaults(
     sortBy?: string
     chartData?: any[]
     chart?: any
+    labelLayout?: 'horizontal' | 'vertical' | 'tilted'
+    labelTiltAngle?: number
   }>(),
   {
-    groupBy: () => []
+    groupBy: () => [],
+    labelLayout: 'horizontal',
+    labelTiltAngle: 45
   }
 )
 
@@ -203,8 +214,41 @@ watch(
     justify-content: center;
     /* 水平居中 */
     align-items: center;
+  }
 
-    /* transform: rotate(90deg); */
+  /* 水平布局 */
+  .layout-horizontal {
+    .div-center-text-span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  /* 垂直布局 */
+  .layout-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    justify-content: flex-start;
+
+    .div-center-text-span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  /* 倾斜布局 */
+  .layout-tilted {
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding-top: 4px;
+
+    .div-center-text-span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 }
 </style>

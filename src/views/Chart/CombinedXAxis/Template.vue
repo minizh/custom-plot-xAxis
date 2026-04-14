@@ -1,5 +1,84 @@
 <template>
   <div class="chart-container">
+    <!-- 配置面板 -->
+    <div class="config-panel">
+      <h3>文本旋转配置</h3>
+      
+      <!-- GroupXAxis 配置 -->
+      <div class="config-section">
+        <h4>GroupXAxis 标签旋转</h4>
+        <div class="config-item">
+          <label>旋转方向：</label>
+          <select v-model="groupXAxisConfig.labelLayout">
+            <option value="horizontal">水平 (horizontal)</option>
+            <option value="vertical">垂直 (vertical)</option>
+            <option value="tilted">倾斜 (tilted)</option>
+          </select>
+        </div>
+        <div class="config-item" v-if="groupXAxisConfig.labelLayout === 'tilted'">
+          <label>倾斜角度：</label>
+          <input 
+            type="number" 
+            v-model.number="groupXAxisConfig.labelTiltAngle" 
+            min="0" 
+            max="90" 
+          />
+          <span>° (逆时针旋转)</span>
+        </div>
+      </div>
+
+      <!-- TableXAxis 配置 -->
+      <div class="config-section">
+        <h4>TableXAxis 标签旋转</h4>
+        
+        <!-- 类别行配置 -->
+        <div class="config-subsection">
+          <h5>类别行 (categories)</h5>
+          <div class="config-item">
+            <label>旋转方向：</label>
+            <select v-model="tableXAxisConfig.categoryLayout">
+              <option value="horizontal">水平 (horizontal)</option>
+              <option value="vertical">垂直 (vertical)</option>
+              <option value="tilted">倾斜 (tilted)</option>
+            </select>
+          </div>
+          <div class="config-item" v-if="tableXAxisConfig.categoryLayout === 'tilted'">
+            <label>倾斜角度：</label>
+            <input 
+              type="number" 
+              v-model.number="tableXAxisConfig.categoryTiltAngle" 
+              min="0" 
+              max="90" 
+            />
+            <span>° (逆时针旋转)</span>
+          </div>
+        </div>
+
+        <!-- 每个 Header 独立配置 -->
+        <div class="config-subsection" v-for="header in tableHeaders" :key="header.value">
+          <h5>{{ header.label }} 行</h5>
+          <div class="config-item">
+            <label>旋转方向：</label>
+            <select v-model="tableXAxisConfig.headerLayouts[header.value].layout">
+              <option value="horizontal">水平 (horizontal)</option>
+              <option value="vertical">垂直 (vertical)</option>
+              <option value="tilted">倾斜 (tilted)</option>
+            </select>
+          </div>
+          <div class="config-item" v-if="tableXAxisConfig.headerLayouts[header.value].layout === 'tilted'">
+            <label>倾斜角度：</label>
+            <input 
+              type="number" 
+              v-model.number="tableXAxisConfig.headerLayouts[header.value].tiltAngle" 
+              min="0" 
+              max="90" 
+            />
+            <span>° (逆时针旋转)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 图表区域 -->
     <div class="chart-wrapper">
       <div ref="chartRef" class="chart"></div>
@@ -13,18 +92,18 @@
         :chart-data="xAxisData"
         :group-by="['productId', 'lotId']"
         :sort-by="'waferId'"
+        :label-layout="groupXAxisConfig.labelLayout"
+        :label-tilt-angle="groupXAxisConfig.labelTiltAngle"
       />
       
       <!-- 统计值表格X轴 -->
       <TableXAxis
         :chart="chartInstance"
         :chart-data="chartData"
-        :headers="[
-          { value: 'sum', label: 'sum' },
-          { value: 'avg', label: 'avg' },
-          { value: 'max', label: 'max' },
-          { value: 'min', label: 'min' }
-        ]"
+        :headers="tableHeaders"
+        :category-layout="tableXAxisConfig.categoryLayout"
+        :category-tilt-angle="tableXAxisConfig.categoryTiltAngle"
+        :header-layouts="tableXAxisConfig.headerLayouts"
       />
     </div>
   </div>
@@ -32,7 +111,7 @@
 
 <script setup>
 import * as echarts from 'echarts'
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, reactive } from 'vue'
 import GroupXAxis from '../GroupXAxis/GroupXAxis.vue'
 import TableXAxis from '../TableXAxis/TableXAxis.vue'
 
@@ -40,6 +119,32 @@ const chartRef = ref(null)
 const chartData = ref()
 const chartInstance = ref()
 const xAxisData = ref()
+
+// Table headers 配置
+const tableHeaders = [
+  { value: 'sum', label: 'sum' },
+  { value: 'avg', label: 'avg' },
+  { value: 'max', label: 'max' },
+  { value: 'min', label: 'min' }
+]
+
+// GroupXAxis 配置
+const groupXAxisConfig = reactive({
+  labelLayout: 'horizontal',
+  labelTiltAngle: 45
+})
+
+// TableXAxis 配置
+const tableXAxisConfig = reactive({
+  categoryLayout: 'horizontal',
+  categoryTiltAngle: 45,
+  headerLayouts: {
+    sum: { layout: 'horizontal', tiltAngle: 45 },
+    avg: { layout: 'vertical', tiltAngle: 45 },
+    max: { layout: 'tilted', tiltAngle: 45 },
+    min: { layout: 'tilted', tiltAngle: 30 }
+  }
+})
 
 // 测试数据
 const testData = [
@@ -179,6 +284,89 @@ onBeforeUnmount(() => {
   padding: 20px;
   display: flex;
   flex-direction: column;
+}
+
+.config-panel {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.config-panel h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #303133;
+}
+
+.config-panel h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.config-panel h5 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.config-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.config-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.config-subsection {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.config-item:last-child {
+  margin-bottom: 0;
+}
+
+.config-item label {
+  width: 100px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.config-item select {
+  padding: 6px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.config-item input[type="number"] {
+  width: 80px;
+  padding: 6px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.config-item span {
+  margin-left: 8px;
+  font-size: 14px;
+  color: #909399;
 }
 
 .chart-wrapper {
