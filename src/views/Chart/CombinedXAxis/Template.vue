@@ -31,6 +31,16 @@
       <div class="config-section">
         <h4>TableXAxis 标签旋转</h4>
         
+        <!-- 自动间隔显示 -->
+        <div class="config-item">
+          <label>自动间隔显示：</label>
+          <input 
+            type="checkbox" 
+            v-model="tableXAxisConfig.autoInterval" 
+          />
+          <span>（空间不足时自动间隔显示）</span>
+        </div>
+
         <!-- 类别行配置 -->
         <div class="config-subsection">
           <h5>类别行 (categories)</h5>
@@ -104,6 +114,7 @@
         :category-layout="tableXAxisConfig.categoryLayout"
         :category-tilt-angle="tableXAxisConfig.categoryTiltAngle"
         :header-layouts="tableXAxisConfig.headerLayouts"
+        :auto-interval="tableXAxisConfig.autoInterval"
       />
     </div>
   </div>
@@ -136,6 +147,7 @@ const groupXAxisConfig = reactive({
 
 // TableXAxis 配置
 const tableXAxisConfig = reactive({
+  autoInterval: true,
   categoryLayout: 'horizontal',
   categoryTiltAngle: 45,
   headerLayouts: {
@@ -343,7 +355,7 @@ onBeforeUnmount(() => {
 }
 
 .config-item label {
-  width: 100px;
+  width: 120px;
   font-size: 14px;
   color: #606266;
 }
@@ -361,6 +373,12 @@ onBeforeUnmount(() => {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   font-size: 14px;
+}
+
+.config-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 }
 
 .config-item span {
