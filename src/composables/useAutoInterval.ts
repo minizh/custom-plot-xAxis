@@ -10,6 +10,7 @@ export interface AutoIntervalOptions {
   categoryTiltAngle: number
   fontSize: number
   originWidth: number
+  narrowMode?: boolean
 }
 
 export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
@@ -55,7 +56,14 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
     )
 
     const availableWidth = opts.containerWidth - opts.marginLeft - 20
-    const minCellWidth = labelWidth + 4
+    let minCellWidth = labelWidth + 4
+    if (opts.narrowMode) {
+      if (opts.categoryLayout === 'tilted') {
+        minCellWidth = Math.ceil(labelWidth * 1.2 + 4)
+      } else if (opts.categoryLayout === 'vertical') {
+        minCellWidth = labelWidth
+      }
+    }
 
     if (opts.totalColumns * minCellWidth <= availableWidth) {
       visibleColumns.value = Array.from(

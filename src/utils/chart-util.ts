@@ -144,7 +144,8 @@ export const getDynamicCellStyle = (
   width: number,
   layout: 'horizontal' | 'vertical' | 'tilted',
   tiltAngle: number,
-  fontSize: number
+  fontSize: number,
+  forcedHeight?: number
 ) => {
   const charWidth = fontSize * 0.55
   const textWidth = String(text).length * charWidth
@@ -154,15 +155,20 @@ export const getDynamicCellStyle = (
   } else if (layout === 'tilted') {
     const radian = (tiltAngle * Math.PI) / 180
     contentHeight = textWidth * Math.sin(radian)
+  } else if (layout === 'horizontal') {
+    const charsPerLine = Math.max(1, Math.floor(width / charWidth))
+    const lines = Math.ceil(String(text).length / charsPerLine)
+    contentHeight = lines * fontSize
   }
-  const clearance = layout === 'horizontal' ? 2 : 3
-  const minHeight = layout === 'horizontal' ? fontSize : 28
+  const clearance = 2
+  const minHeight = fontSize
   const targetHeight = Math.max(minHeight, Math.ceil(contentHeight + clearance * 2))
-  const padding = Math.max(0, Math.round((targetHeight - contentHeight) / 2))
+  const finalHeight = forcedHeight ? Math.max(targetHeight, forcedHeight) : targetHeight
+  const padding = Math.max(0, Math.round((finalHeight - contentHeight) / 2))
   return {
     width: `${width}px`,
-    minHeight: `${targetHeight}px`,
-    height: targetHeight,
+    minHeight: `${finalHeight}px`,
+    height: finalHeight,
     padding: `${padding}px 0`
   }
 }
