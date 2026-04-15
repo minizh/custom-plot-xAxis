@@ -103,18 +103,8 @@ const getTextStyle = () => {
   }
 
   // horizontal
-  if (props.truncate) {
-    return {
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      maxWidth: '100%',
-      textAlign: 'center'
-    }
-  }
   return {
-    whiteSpace: 'normal',
-    wordBreak: 'break-all',
+    whiteSpace: 'nowrap',
     textAlign: 'center'
   }
 }

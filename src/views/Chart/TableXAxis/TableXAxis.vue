@@ -303,8 +303,8 @@ const getCellGroups = (header: TableHeader) => {
 const getRowHeight = (header: TableHeader) => {
   const layout = getHeaderLayout(header.value)
   const angle = getHeaderTiltAngle(header.value)
-  let maxH = computeCellHeight(header.label, tablePosition.marginLeft, layout, angle)
-  if (isNarrowMode.value && layout !== 'vertical') {
+  let maxH = computeCellHeight('', tablePosition.marginLeft, layout, angle)
+  if (isNarrowMode.value && layout !== 'vertical' && layout !== 'horizontal') {
     const groups = getCellGroups(header)
     groups.forEach((g) => {
       const h = computeCellHeight(g.text, g.width, layout, angle)

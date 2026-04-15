@@ -367,9 +367,9 @@ const getCellGroups = (yAxis: YAxisTableItem, header: TableHeader) => {
 const getRowHeight = (yAxis: YAxisTableItem, header: TableHeader) => {
   const layout = getHeaderLayout(header.value)
   const angle = getHeaderTiltAngle(header.value)
-  let maxH = computeCellHeight(header.label, tablePosition.marginLeft, layout, angle)
+  let maxH = computeCellHeight('', tablePosition.marginLeft, layout, angle)
   const values = getVisibleValues(yAxis.values)
-  if (isNarrowMode.value && layout !== 'vertical') {
+  if (isNarrowMode.value && layout !== 'vertical' && layout !== 'horizontal') {
     const groups = getCellGroups(yAxis, header)
     groups.forEach((g) => {
       const h = computeCellHeight(g.text, g.width, layout, angle)

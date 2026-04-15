@@ -155,10 +155,6 @@ export const getDynamicCellStyle = (
   } else if (layout === 'tilted') {
     const radian = (tiltAngle * Math.PI) / 180
     contentHeight = textWidth * Math.sin(radian)
-  } else if (layout === 'horizontal') {
-    const charsPerLine = Math.max(1, Math.floor(width / charWidth))
-    const lines = Math.ceil(String(text).length / charsPerLine)
-    contentHeight = lines * fontSize
   }
   const clearance = 2
   const minHeight = fontSize
