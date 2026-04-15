@@ -5,7 +5,7 @@
         <h1>欢迎登录</h1>
         <p>请输入您的账号和密码</p>
       </div>
-      
+
       <el-form
         ref="loginFormRef"
         :model="loginForm"
@@ -22,7 +22,7 @@
             clearable
           />
         </el-form-item>
-        
+
         <el-form-item prop="password">
           <el-input
             v-model="loginForm.password"
@@ -35,7 +35,7 @@
             @keyup.enter="handleLogin"
           />
         </el-form-item>
-        
+
         <el-form-item>
           <el-button
             type="primary"
@@ -68,9 +68,7 @@ const loginForm = reactive({
 })
 
 const loginRules = {
-  username: [
-    { required: true, message: '请输入账号', trigger: 'blur' }
-  ],
+  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
@@ -79,11 +77,11 @@ const loginRules = {
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return
-  
+
   await loginFormRef.value.validate((valid) => {
     if (valid) {
       loading.value = true
-      
+
       // 模拟登录请求
       setTimeout(() => {
         loading.value = false
@@ -184,7 +182,7 @@ const handleLogin = async () => {
   .login-box {
     padding: 32px 24px;
   }
-  
+
   .login-header h1 {
     font-size: 24px;
   }

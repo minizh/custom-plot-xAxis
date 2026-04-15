@@ -4,15 +4,12 @@
     :class="`layout-${layout}`"
     :style="containerStyle"
   >
-    <div
-      class="text-content"
-      :style="getTextStyle()"
-      :title="text"
-    >
+    <div class="text-content" :style="getTextStyle()" :title="text">
       {{ String(text) }}
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
 import { computed } from 'vue'
 
@@ -21,7 +18,7 @@ const props = withDefaults(
     text: string
     width: number
     height: number
-    layout: string
+    layout: 'horizontal' | 'vertical' | 'tilted'
     fontSize: number
     tiltAngle?: number
   }>(),
@@ -31,13 +28,13 @@ const props = withDefaults(
   }
 )
 
-// 垂直布局：容器宽度变成内容所需高度
-// 倾斜布局：容器高度需要容纳倾斜后的文本
+// vertical: container width becomes content required height
+// tilted: container height needs to accommodate tilted text
 
 const containerStyle = computed(() => {
   if (props.layout === 'vertical') {
-    // 垂直布局：容器旋转90度后，需要的"宽度"就是文本占据的"高度"
-    // 估算：文本长度 * 单字符宽度
+    // After rotating 90deg, the "width" needed is the text occupied "height"
+    // Estimate: text length * single char width
     const charWidth = props.fontSize * 0.55
     const textWidth = String(props.text).length * charWidth
     return {
@@ -48,16 +45,16 @@ const containerStyle = computed(() => {
   }
 
   if (props.layout === 'tilted') {
-    // 倾斜布局：高度需要能容纳倾斜后的文本
-    // 文本长度 * cos(角度) = 水平占用
-    // 文本长度 * sin(角度) = 垂直占用
-    // 但由于容器有固定宽度，需要综合计算
+    // Height needs to accommodate tilted text
+    // text length * cos(angle) = horizontal occupation
+    // text length * sin(angle) = vertical occupation
+    // But container has fixed width, so need comprehensive calculation
     const charWidth = props.fontSize * 0.55
     const textWidth = String(props.text).length * charWidth
-    // 倾斜后占据的垂直空间
+    // Vertical space occupied after tilting
     const tiltRadian = (props.tiltAngle * Math.PI) / 180
     const verticalSpace = textWidth * Math.sin(tiltRadian)
-    // 基础高度 + 倾斜额外空间
+    // Base height + tilted extra space
     const extraHeight = Math.max(0, verticalSpace - props.width * 0.3)
     return {
       width: `${props.width}px`,
@@ -66,7 +63,7 @@ const containerStyle = computed(() => {
     }
   }
 
-  // 水平布局
+  // horizontal
   return {
     width: `${props.width}px`,
     height: `${props.height}px`,
@@ -115,6 +112,7 @@ const getTextStyle = () => {
   }
 }
 </script>
+
 <style scoped>
 .text-div-container {
   position: relative;

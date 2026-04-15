@@ -1,0 +1,81 @@
+.chart-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.config-panel {
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.config-panel h3 { margin: 0 0 16px 0; font-size: 16px; color: #303133; }
+
+.config-panel h4 { margin: 0 0 12px 0; font-size: 14px; color: #606266; font-weight: 500; }
+
+.config-panel h5 { margin: 0 0 8px 0; font-size: 13px; color: #909399; font-weight: 500; }
+
+.config-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.config-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.config-subsection {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.config-item:last-child { margin-bottom: 0; }
+
+.config-item label { width: 120px; font-size: 14px; color: #606266; }
+
+.config-item select {
+  padding: 6px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.config-item input[type="number"] {
+  width: 80px;
+  padding: 6px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.config-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.config-item span { margin-left: 8px; font-size: 14px; color: #909399; }
+
+.chart-wrapper { width: 100%; height: 400px; }
+
+.chart { width: 100%; height: 100%; }
+
+.x-axis-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

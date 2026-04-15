@@ -1,10 +1,10 @@
 <template>
   <div
-    v-if="xAxisPosition.width > 0 && groupByData.length > 0"
+    v-if="groupPosition.width > 0 && groupByData.length > 0"
     class="group-x-axis"
     :style="{
-      marginLeft: `${xAxisPosition.left}px`,
-      width: `${xAxisPosition.width}px`
+      marginLeft: `${groupPosition.left}px`,
+      width: `${groupPosition.width}px`
     }"
   >
     <div v-for="(data, index) in groupByData" :key="index">
@@ -16,11 +16,14 @@
         }"
       >
         <div
-          v-for="(item, index) in data"
-          :key="item.value"
+          v-for="item in data"
+          :key="String(item.value)"
           class="div-group"
           :style="{
-            flex: showAxisCount <= 1 ? '0 0 100%' : `0 0 ${((item.count - 1) / (showAxisCount - 1)) * 100}%`
+            flex:
+              showAxisCount <= 1
+                ? '0 0 100%'
+                : `0 0 ${((item.count - 1) / (showAxisCount - 1)) * 100}%`
           }"
         >
           <div class="div-group-line" style="width: 100%"></div>
@@ -29,10 +32,13 @@
             :class="`layout-${labelLayout}`"
             :style="{
               width: '100%',
-              transform: labelLayout === 'tilted' ? `rotate(-${labelTiltAngle}deg)` : undefined
+              transform:
+                labelLayout === 'tilted'
+                  ? `rotate(-${labelTiltAngle}deg)`
+                  : undefined
             }"
           >
-            <span class="div-center-text-span" :title="item.value">
+            <span class="div-center-text-span" :title="String(item.value)">
               {{ item.value }}
             </span>
           </div>
@@ -43,142 +49,68 @@
 </template>
 
 <script setup lang="ts">
-import {
-  getConfiguredGridPx,
-  getXAxisVisibleDomRange,
-  sortAndGroupCount
-} from '@/utils/chart-util'
-import { reactive, ref, watch } from 'vue'
+import { useChartDataZoom } from '@/composables/useChartDataZoom'
+import { useChartPosition } from '@/composables/useChartPosition'
+import { useGroupByData } from '@/composables/useGroupByData'
+import type { ChartDataItem } from '@/types/echarts'
+import type { ECharts } from 'echarts'
+import { computed, toRef, watch, type Ref } from 'vue'
 
 const props = withDefaults(
   defineProps<{
     groupBy: string[]
     sortBy?: string
-    chartData?: any[]
-    chart?: any
+    chartData?: ChartDataItem[]
+    chart?: ECharts
     labelLayout?: 'horizontal' | 'vertical' | 'tilted'
     labelTiltAngle?: number
   }>(),
   {
     groupBy: () => [],
+    sortBy: undefined,
+    chartData: () => [],
+    chart: undefined,
     labelLayout: 'horizontal',
     labelTiltAngle: 45
   }
 )
 
-const xAxisPosition = reactive({
-  width: 0,
-  left: 0
-})
-const groupByData = ref([])
-const showAxisCount = ref()
+const chartRef = toRef(props, 'chart')
+const chartDataRef = toRef(props, 'chartData') as Ref<ChartDataItem[]>
+const groupByRef = toRef(props, 'groupBy')
+const sortByRef = toRef(props, 'sortBy')
 
-const setGroupByDataFn = (data) => {
-  // groupBy
-  // 这块可以交给后端来做
-  console.log(data)
-  const newGroupByData = []
-  props.groupBy.forEach((item) => {
-    const newData = sortAndGroupCount(
-      [...data],
-      'waferId',
-      item,
-      !!props.sortBy
-    )
-    newGroupByData.push(newData)
-  })
-  console.log(newGroupByData)
-  groupByData.value = newGroupByData
-}
-
-const setXAxisPosition = () => {
-  if (!props.chart) return
-  // 判断是否显示
-  const { point } = getXAxisVisibleDomRange(props.chart, 0)
-
-  let width = point.width
-  let left = point.left
-
-  // 处理只有一条数据的情况
-  if (props.chartData?.length === 1 || width === 0) {
-    const gridLeft = getConfiguredGridPx(props.chart, 0, 'left')
-    const gridRight = getConfiguredGridPx(props.chart, 0, 'right')
-    const chartWidth = props.chart.getDom().clientWidth
-    width = chartWidth - gridLeft - gridRight
-    left = gridLeft
-  }
-
-  xAxisPosition.left = left
-  xAxisPosition.width = width
-}
-
-const hideChartXAxis = () => {
-  if (props.chart) {
-    props.chart.setOption({
-      xAxis: {
-        axisLabel: { show: false },
-        axisTick: { show: false },
-        axisLine: { show: false }
-      }
-    })
-  }
-}
-
-const updateVisibleData = () => {
-  if (!props.chart || !props.chartData?.length) {
-    return props.chartData || []
-  }
-
-  const opt = props.chart.getOption()
-  const dz = opt.dataZoom?.[0]
-
-  if (!dz || dz.start == null || dz.end == null) {
-    return props.chartData
-  }
-
-  const start = dz.start
-  const end = dz.end
-  const total = props.chartData.length
-
-  const startIndex = Math.max(0, Math.round((start / 100) * (total - 1)))
-  const endIndex = Math.min(total - 1, Math.round((end / 100) * (total - 1)))
-
-  return props.chartData.slice(startIndex, endIndex + 1)
-}
-
-const syncGroupXAxis = () => {
-  if (props.chart && props.chartData?.length) {
-    hideChartXAxis()
-    setXAxisPosition()
-    const visibleData = updateVisibleData()
-    setGroupByDataFn(visibleData)
-    showAxisCount.value = visibleData.length
-  } else {
-    groupByData.value = []
-  }
-}
-
-watch(
-  () => props.chart,
-  (chart, oldChart, onCleanup) => {
-    if (chart) {
-      chart.on('dataZoom', syncGroupXAxis)
-      syncGroupXAxis()
-      onCleanup(() => {
-        chart.off('dataZoom', syncGroupXAxis)
-      })
-    }
-  }
+const { visibleData } = useChartDataZoom(chartRef, chartDataRef)
+const { groupByData } = useGroupByData(groupByRef, sortByRef, visibleData)
+const { groupPosition } = useChartPosition(
+  chartRef,
+  computed(() => (visibleData.value as ChartDataItem[])?.length || 0)
 )
 
+const showAxisCount = computed(
+  () => (visibleData.value as ChartDataItem[])?.length || 0
+)
+
+const hideChartXAxis = () => {
+  props.chart?.setOption({
+    xAxis: {
+      axisLabel: { show: false },
+      axisTick: { show: false },
+      axisLine: { show: false }
+    }
+  })
+}
+
 watch(
-  () => [props.chartData, props.groupBy, props.sortBy],
-  () => {
-    syncGroupXAxis()
+  visibleData,
+  (data) => {
+    if (props.chart && data && (data as ChartDataItem[]).length > 0) {
+      hideChartXAxis()
+    } else {
+      groupByData.value = []
+    }
   },
-  {
-    immediate: true
-  }
+  { immediate: true }
 )
 </script>
 
@@ -197,58 +129,51 @@ watch(
   min-width: 0;
   box-sizing: border-box;
   margin-bottom: 4px;
+}
 
-  .div-group-line {
-    height: 10px;
-    min-width: 0;
+.div-group-line {
+  height: 10px;
+  min-width: 0;
+  margin-bottom: 4px;
+  background-color: inherit;
+  border: 1px solid #000;
+  border-top: none;
+}
 
-    margin-bottom: 4px;
-    background-color: inherit;
-    border: 1px solid #000;
-    border-top: none;
-  }
+.div-center-text {
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-  .div-center-text {
-    min-width: 0;
-    display: flex;
-    justify-content: center;
-    /* 水平居中 */
-    align-items: center;
-  }
+.layout-horizontal .div-center-text-span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  /* 水平布局 */
-  .layout-horizontal {
-    .div-center-text-span {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
+.layout-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  justify-content: flex-start;
+}
 
-  /* 垂直布局 */
-  .layout-vertical {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    justify-content: flex-start;
+.layout-vertical .div-center-text-span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-    .div-center-text-span {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
+.layout-tilted {
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding-top: 4px;
+}
 
-  /* 倾斜布局 */
-  .layout-tilted {
-    justify-content: flex-end;
-    align-items: flex-start;
-    padding-top: 4px;
-
-    .div-center-text-span {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
+.layout-tilted .div-center-text-span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>
