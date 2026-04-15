@@ -52,6 +52,7 @@
 import { useChartDataZoom } from '@/composables/useChartDataZoom'
 import { useChartPosition } from '@/composables/useChartPosition'
 import { useGroupByData } from '@/composables/useGroupByData'
+import { hideChartXAxis } from '@/composables/useChartCommon'
 import type { ChartDataItem } from '@/types/echarts'
 import type { ECharts } from 'echarts'
 import { computed, toRef, watch, type Ref } from 'vue'
@@ -80,32 +81,29 @@ const chartDataRef = toRef(props, 'chartData') as Ref<ChartDataItem[]>
 const groupByRef = toRef(props, 'groupBy')
 const sortByRef = toRef(props, 'sortBy')
 
+// 监听 dataZoom，获取当前可见的数据切片
 const { visibleData } = useChartDataZoom(chartRef, chartDataRef)
+
+// 对可见数据按 groupBy 字段进行分组计数
 const { groupByData } = useGroupByData(groupByRef, sortByRef, visibleData)
+
+// 同步图表网格位置，用于精确定位自定义分组轴的 left/width
 const { groupPosition } = useChartPosition(
   chartRef,
   computed(() => (visibleData.value as ChartDataItem[])?.length || 0)
 )
 
+// 当前可见的数据点数量
 const showAxisCount = computed(
   () => (visibleData.value as ChartDataItem[])?.length || 0
 )
 
-const hideChartXAxis = () => {
-  props.chart?.setOption({
-    xAxis: {
-      axisLabel: { show: false },
-      axisTick: { show: false },
-      axisLine: { show: false }
-    }
-  })
-}
-
+// 当有可见数据时，隐藏 ECharts 原生的 X 轴标签/刻度/轴线
 watch(
   visibleData,
   (data) => {
     if (props.chart && data && (data as ChartDataItem[]).length > 0) {
-      hideChartXAxis()
+      hideChartXAxis(props.chart)
     } else {
       groupByData.value = []
     }

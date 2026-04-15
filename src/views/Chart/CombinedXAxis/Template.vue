@@ -126,16 +126,17 @@
 
 <script setup>
 import { useECharts } from '@/composables/useECharts'
-import { onMounted, reactive, ref, watch } from 'vue'
+import { useChartDemo } from '@/composables/useChartDemo'
+import { reactive, ref, watch } from 'vue'
 import GroupXAxis from '../GroupXAxis/GroupXAxis.vue'
 import TableXAxis from '../TableXAxis/TableXAxis.vue'
 import './styles.css'
 
 const chartRef = ref(null)
-const chartData = ref()
 const chartInstance = ref()
 const { chartInstance: echartInstance, setChartOption } = useECharts(chartRef)
 
+// 将 echartInstance 同步到本地 ref，供子组件使用
 watch(echartInstance, (val) => {
   chartInstance.value = val
 })
@@ -183,6 +184,9 @@ const testData = [
   { productId: '0003A', lotId: '0006', waferId: '0001A15' }
 ]
 
+/**
+ * 生成演示数据：基于 testData 生成 categories 和带统计字段的 values
+ */
 const generateData = () => {
   const categories = []
   const values = []
@@ -198,51 +202,20 @@ const generateData = () => {
       min: Math.floor(Math.random() * 50)
     })
   }
-  chartData.value = { categories, values }
+  return { categories, values }
 }
 
-const getOption = () => ({
-  title: { text: '分组X轴 + 统计值表示例', left: 'center' },
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: { type: 'cross' },
-    formatter: (params) => {
-      const { name, value } = params[0]
-      return `waferId:${name},value:${value}`
+// 使用 Composable 统一处理数据生成；但 CombinedXAxis 需要自定义 option（隐藏原生 X 轴）
+const { chartData } = useChartDemo(
+  setChartOption,
+  '分组X轴 + 统计值表示例',
+  generateData,
+  {
+    xAxis: {
+      axisLabel: { show: false },
+      axisTick: { show: false },
+      axisLine: { show: false }
     }
-  },
-  legend: { data: ['数值'], top: 30 },
-  grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
-  xAxis: {
-    type: 'category',
-    data: chartData.value.categories,
-    axisLabel: { show: false },
-    axisTick: { show: false },
-    axisLine: { show: false }
-  },
-  yAxis: { type: 'value', name: '数值' },
-  dataZoom: [
-    {
-      type: 'inside',
-      xAxisIndex: 0,
-      zoomOnMouseWheel: true,
-      moveOnMouseWheel: true,
-      moveOnMouseMove: true,
-      throttle: 100
-    }
-  ],
-  series: [
-    {
-      name: '数值',
-      type: 'line',
-      data: chartData.value.values.map((item) => item.value),
-      itemStyle: { color: '#409eff' }
-    }
-  ]
-})
-
-onMounted(() => {
-  generateData()
-  setChartOption(getOption())
-})
+  }
+)
 </script>

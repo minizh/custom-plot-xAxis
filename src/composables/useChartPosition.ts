@@ -1,5 +1,6 @@
 import type { ECharts } from 'echarts'
 import { reactive, watch, type Ref } from 'vue'
+import { getVisibleRange } from '@/composables/useChartCommon'
 
 export interface TablePosition {
   marginLeft: number
@@ -11,6 +12,10 @@ export interface GroupPosition {
   width: number
 }
 
+/**
+ * Composable: 同步 ECharts 图表网格位置到响应式对象
+ * 用于在图表上方/下方覆盖自定义 DOM（如分组 X 轴、表格 X 轴）时精确定位
+ */
 export function useChartPosition(
   chart: Ref<ECharts | undefined>,
   _categoryCount?: Ref<number>
@@ -25,6 +30,9 @@ export function useChartPosition(
     width: 0
   })
 
+  /**
+   * 获取 ECharts grid 组件的矩形区域（像素坐标）
+   */
   const getGridRect = (instance: ECharts) => {
     try {
       const grid = (instance as any).getModel().getComponent('grid', 0)
@@ -36,41 +44,17 @@ export function useChartPosition(
     }
   }
 
-  const getDataZoomState = (instance: ECharts) => {
-    const opt = instance?.getOption() as
-      | { dataZoom?: Array<{ start?: number; end?: number }> }
-      | undefined
-    const dz = opt?.dataZoom?.[0]
-    if (!dz || dz.start == null || dz.end == null) return null
-    return { start: dz.start, end: dz.end }
-  }
-
-  const getVisibleRange = (instance: ECharts) => {
-    const total = instance.getOption().xAxis?.[0]?.data?.length || 0
-    if (!total) return null
-
-    const dz = getDataZoomState(instance)
-    if (!dz) {
-      return { startIndex: 0, endIndex: total - 1, total }
-    }
-
-    const startIndex = Math.max(
-      0,
-      Math.round((dz.start / 100) * (total - 1))
-    )
-    const endIndex = Math.min(
-      total - 1,
-      Math.round((dz.end / 100) * (total - 1))
-    )
-    return { startIndex, endIndex, total }
-  }
-
+  /**
+   * 计算单个数据点在网格中的像素宽度，并更新 tablePosition
+   * tablePosition 表示：第一个数据点左边缘到第二个数据点左边缘的宽度（即单格宽度）
+   */
   const setTablePosition = () => {
     const instance = chart.value
     if (!instance) return
 
     const rect = getGridRect(instance)
-    const range = getVisibleRange(instance)
+    const opt = instance.getOption() as { xAxis?: Array<{ data?: unknown[] }> }
+    const range = getVisibleRange(instance, opt.xAxis?.[0]?.data?.length || 0)
     if (!range) {
       if (rect) {
         tablePosition.width = rect.width
@@ -104,12 +88,17 @@ export function useChartPosition(
     tablePosition.marginLeft = marginLeft
   }
 
+  /**
+   * 计算可见区域在网格中的整体 left/width，并更新 groupPosition
+   * groupPosition 表示：可见区域最左侧到最右侧的总宽度和左偏移
+   */
   const setGroupPosition = () => {
     const instance = chart.value
     if (!instance) return
 
     const rect = getGridRect(instance)
-    const range = getVisibleRange(instance)
+    const opt = instance.getOption() as { xAxis?: Array<{ data?: unknown[] }> }
+    const range = getVisibleRange(instance, opt.xAxis?.[0]?.data?.length || 0)
     if (!range) {
       if (rect) {
         groupPosition.width = rect.width
@@ -142,11 +131,15 @@ export function useChartPosition(
     groupPosition.left = left
   }
 
+  /**
+   * 同步两种位置计算
+   */
   const syncPosition = () => {
     setTablePosition()
     setGroupPosition()
   }
 
+  // 监听 chart 实例变化，绑定 dataZoom 事件以在缩放/平移时自动同步位置
   watch(
     () => chart.value,
     (instance, _old, onCleanup) => {

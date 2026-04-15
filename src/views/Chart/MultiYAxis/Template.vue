@@ -123,6 +123,7 @@ const chartRef = ref(null)
 const chartInstance = ref()
 const { chartInstance: echartInstance, setChartOption } = useECharts(chartRef)
 
+// 将 echarts 实例同步到本地 ref，供子组件（MultiYAxisTable）使用
 watch(echartInstance, (val) => {
   chartInstance.value = val
 })
@@ -132,6 +133,7 @@ const rawValues = ref([])
 const dialogVisible = ref(false)
 const bgColorMode = ref('gray')
 
+// 可选的统计函数列表
 const statFuncOptions = [
   'svg',
   'StdDev',
@@ -143,6 +145,7 @@ const statFuncOptions = [
   'uniqueCount'
 ]
 
+// 统计列配置（决定 MultiYAxisTable 中显示哪些列及其布局）
 const statConfigs = ref([
   { statFunc: 'sum', orientation: 'horizontal', customAngle: 45 },
   { statFunc: 'avg', orientation: 'horizontal', customAngle: 45 },
@@ -150,8 +153,10 @@ const statConfigs = ref([
   { statFunc: 'min', orientation: 'horizontal', customAngle: 45 }
 ])
 
+// Y轴标签配置
 const yAxisLabels = ref(['数值', '比率'])
 
+// ECharts 默认色系，用于多 Y 轴的配色
 const legendColors = [
   '#5470c6',
   '#91cc75',
@@ -185,6 +190,9 @@ const removeYAxisLabel = (index) => {
   yAxisLabels.value.splice(index, 1)
 }
 
+/**
+ * 计算传给表格组件的 headers（基于 statConfigs）
+ */
 const computedHeaders = computed(() => {
   return statConfigs.value.map((cfg, index) => ({
     value: cfg.statFunc + '_' + index,
@@ -192,6 +200,9 @@ const computedHeaders = computed(() => {
   }))
 })
 
+/**
+ * 计算传给表格组件的各列布局配置
+ */
 const computedHeaderLayouts = computed(() => {
   const layouts = {}
   statConfigs.value.forEach((cfg, index) => {
@@ -204,6 +215,10 @@ const computedHeaderLayouts = computed(() => {
   return layouts
 })
 
+/**
+ * 计算多 Y 轴表格所需的数据列表
+ * 每个 Y 轴对应一组 values 和背景色
+ */
 const computedYAxisList = computed(() => {
   const headers = computedHeaders.value
   const baseValues = rawValues.value
@@ -215,6 +230,7 @@ const computedYAxisList = computed(() => {
       const obj = { name: item.name }
       headers.forEach((h) => {
         const raw = item[h.label] ?? 0
+        // 为不同 Y 轴引入差异化数据，使折线不重叠
         obj[h.value] = Math.floor(raw * (1 + idx * 0.3)) + idx * 10
       })
       return obj
@@ -234,6 +250,9 @@ const computedYAxisList = computed(() => {
   })
 })
 
+/**
+ * 生成演示数据：15 条测试数据，附带各类统计字段
+ */
 const generateData = () => {
   const cats = []
   const vals = []
@@ -256,6 +275,9 @@ const generateData = () => {
   rawValues.value = vals
 }
 
+/**
+ * 构建 ECharts option：包含多个 Y 轴和对应的折线系列
+ */
 const getOption = () => {
   const labels = yAxisLabels.value
   const yAxis = labels.map((label, idx) => ({
@@ -309,6 +331,7 @@ const getOption = () => {
   }
 }
 
+// 配置确认后重新渲染图表
 const handleConfirm = () => {
   setChartOption(getOption())
   dialogVisible.value = false

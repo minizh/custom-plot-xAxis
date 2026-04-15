@@ -62,11 +62,13 @@ const router = useRouter()
 const loginFormRef = ref(null)
 const loading = ref(false)
 
+// 登录表单数据
 const loginForm = reactive({
   username: '',
   password: ''
 })
 
+// 表单校验规则
 const loginRules = {
   username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
   password: [
@@ -75,6 +77,9 @@ const loginRules = {
   ]
 }
 
+/**
+ * 登录处理：先校验表单，通过后模拟异步请求并跳转首页
+ */
 const handleLogin = async () => {
   if (!loginFormRef.value) return
 

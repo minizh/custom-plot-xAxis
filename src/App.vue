@@ -1,5 +1,6 @@
 <template>
   <div id="app-page" :class="{ 'login-page': isLoginPage }">
+    <!-- 顶部 Header：登录页不显示 -->
     <el-header v-if="!isLoginPage" class="app-header">
       <div class="header-content">
         <div class="logo">
@@ -8,6 +9,7 @@
       </div>
     </el-header>
 
+    <!-- 主内容区：登录页仅显示路由视图，非登录页显示侧边栏 + 路由视图 -->
     <div v-if="!isLoginPage" class="app-body">
       <el-aside class="app-aside" width="240px">
         <el-menu
@@ -18,6 +20,7 @@
           @select="handleMenuSelect"
         >
           <template v-for="item in menuRoutes" :key="item.path">
+            <!-- 有子路由：渲染为子菜单 -->
             <el-sub-menu
               v-if="item.children && item.children.length > 0"
               :index="item.path"
@@ -37,6 +40,7 @@
               </el-menu-item>
             </el-sub-menu>
 
+            <!-- 无子路由：渲染为普通菜单项 -->
             <el-menu-item v-else :index="item.path">
               <el-icon v-if="item.meta && item.meta.icon">
                 <component :is="iconMap[item.meta.icon as string]" />
@@ -52,6 +56,7 @@
       </el-main>
     </div>
 
+    <!-- 登录页专用主内容区 -->
     <el-main v-if="isLoginPage" class="app-main login-main">
       <router-view />
     </el-main>
@@ -73,6 +78,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
+// 从 Composable 获取菜单所需的状态和方法
 const {
   menuRoutes,
   activeIndex,
@@ -81,6 +87,7 @@ const {
   handleMenuSelect
 } = useMenuRoutes()
 
+// 图标映射表：路由 meta.icon -> Element Plus 图标组件
 const iconMap: Record<string, unknown> = {
   House,
   Document,
@@ -91,6 +98,7 @@ const iconMap: Record<string, unknown> = {
   Mug
 }
 
+// 判断当前是否为登录页，用于控制布局和菜单显隐
 const isLoginPage = computed(() => route.path === '/login')
 </script>
 

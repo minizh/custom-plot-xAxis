@@ -1,31 +1,33 @@
 import type { ChartDataItem, TableChartData } from '@/types/echarts'
 import type { ECharts } from 'echarts'
 import { ref, watch, type Ref } from 'vue'
+import { getDataZoomState } from '@/composables/useChartCommon'
 
 export interface DataZoomState {
   start: number
   end: number
 }
 
+/**
+ * Composable: 根据 ECharts 的 dataZoom 状态，计算当前可见的数据切片
+ * 支持两类数据格式：带 categories/values 的 TableChartData 和普通的 ChartDataItem[]
+ */
 export function useChartDataZoom<T extends TableChartData | ChartDataItem[]>(
   chart: Ref<ECharts | undefined>,
   chartData: Ref<T | undefined>
 ) {
   const visibleData = ref<T>()
 
-  const getDataZoomState = (): DataZoomState | null => {
-    const opt = chart.value?.getOption() as
-      | { dataZoom?: Array<{ start?: number; end?: number }> }
-      | undefined
-    const dz = opt?.dataZoom?.[0]
-    if (!dz || dz.start == null || dz.end == null) return null
-    return { start: dz.start, end: dz.end }
-  }
-
+  /**
+   * 类型守卫：判断数据是否为 TableChartData（含有 categories 数组）
+   */
   const hasCategories = (data: unknown): data is TableChartData => {
     return !!data && Array.isArray((data as TableChartData).categories)
   }
 
+  /**
+   * 根据 dataZoom 百分比截取可见数据
+   */
   const updateVisibleData = () => {
     const data = chartData.value
     if (!data) {
@@ -37,13 +39,14 @@ export function useChartDataZoom<T extends TableChartData | ChartDataItem[]>(
       return
     }
 
-    const dz = getDataZoomState()
+    const dz = getDataZoomState(chart.value)
     if (!dz) {
       visibleData.value = data
       return
     }
 
     if (hasCategories(data)) {
+      // TableChartData：同步截取 categories 和 values
       const total = data.categories.length
       const startIndex = Math.max(0, Math.round((dz.start / 100) * (total - 1)))
       const endIndex = Math.min(
@@ -55,6 +58,7 @@ export function useChartDataZoom<T extends TableChartData | ChartDataItem[]>(
         values: data.values.slice(startIndex, endIndex + 1)
       } as T
     } else {
+      // 普通数组：直接 slice
       const arr = data as ChartDataItem[]
       const total = arr.length
       const startIndex = Math.max(0, Math.round((dz.start / 100) * (total - 1)))
@@ -66,6 +70,7 @@ export function useChartDataZoom<T extends TableChartData | ChartDataItem[]>(
     }
   }
 
+  // 监听 chart 实例变化，绑定/解绑 dataZoom 事件
   watch(
     () => chart.value,
     (instance, _oldInstance, onCleanup) => {
@@ -79,6 +84,7 @@ export function useChartDataZoom<T extends TableChartData | ChartDataItem[]>(
     }
   )
 
+  // 监听原始数据变化，立即更新可见数据
   watch(
     () => chartData.value,
     () => {

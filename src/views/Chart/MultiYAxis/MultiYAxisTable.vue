@@ -2,6 +2,7 @@
   <div :class="[`layout-${categoryLayout}`, { 'narrow-mode': isNarrowMode }]" :style="{ position: 'relative' }">
     <template v-for="(yAxis, yIndex) in yAxisList || []" :key="`yaxis-${yIndex}`">
       <div class="table-group">
+        <!-- 类别行 -->
         <div
           v-if="showCategoryRow && visibleCategories.length"
           :style="{ display: 'flex' }"
@@ -58,12 +59,15 @@
             </template>
           </div>
         </div>
+
+        <!-- 数据行 -->
         <template v-if="yAxis.headers?.length">
           <div
             v-for="item in yAxis.headers"
             :key="`row-${yIndex}-${item.value}`"
             :style="{ display: 'flex' }"
           >
+            <!-- 标签列（无背景无边框） -->
             <div
               class="table-cell-div table-label-cell no-bg-no-border"
               :style="getDynamicCellStyle(item.label, tablePosition.marginLeft, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[`${yIndex}-${item.value}`])"
@@ -79,6 +83,7 @@
               />
             </div>
             <div :style="{ display: 'flex' }">
+              <!-- 正常显示或竖排/横排窄屏显示 -->
               <template v-if="!isNarrowMode || getHeaderLayout(item.value) === 'vertical' || getHeaderLayout(item.value) === 'horizontal'">
                 <template
                   v-for="(category, index) in visibleCategories"
@@ -104,9 +109,10 @@
                   </div>
                 </template>
               </template>
+              <!-- 窄屏 tilted 布局：合并单元格显示 -->
               <template v-else>
                 <div
-                  v-for="(group, gIdx) in getCellGroups(yAxis, item)"
+                  v-for="(group, gIdx) in getCellGroups(getVisibleValues(yAxis.values), item)"
                   :key="`group-${yIndex}-${item.value}-${gIdx}`"
                   class="table-cell-div"
                   :style="{
@@ -136,9 +142,8 @@
 
 <script setup lang="ts">
 import TextDiv from '@/components/TextDiv/TextDiv.vue'
-import { useAutoInterval } from '@/composables/useAutoInterval'
-import { useChartPosition } from '@/composables/useChartPosition'
-import { useResizeObserver } from '@/composables/useResizeObserver'
+import { useDataZoomState } from '@/composables/useChartCommon'
+import { useTableAxis } from '@/composables/useTableAxis'
 import type { ChartDataItem, HeaderLayout, TableHeader } from '@/types/echarts'
 import type { ECharts } from 'echarts'
 import { computed, ref, toRef, watch } from 'vue'
@@ -180,36 +185,14 @@ const props = withDefaults(
 
 const chartRef = toRef(props, 'chart')
 
-const dataZoomState = ref<{ start: number; end: number } | null>(null)
-
-const getDataZoomState = () => {
-  const opt = chartRef.value?.getOption() as
-    | { dataZoom?: Array<{ start?: number; end?: number }> }
-    | undefined
-  const dz = opt?.dataZoom?.[0]
-  if (!dz || dz.start == null || dz.end == null) return null
-  return { start: dz.start, end: dz.end }
-}
-
-const updateDataZoomState = () => {
-  dataZoomState.value = getDataZoomState()
-}
-
-watch(
-  () => chartRef.value,
-  (instance, _oldInstance, onCleanup) => {
-    if (instance) {
-      instance.on('dataZoom', updateDataZoomState)
-      updateDataZoomState()
-      onCleanup(() => {
-        instance.off('dataZoom', updateDataZoomState)
-      })
-    }
-  }
-)
+// 使用通用的 dataZoom 状态监听
+const { dataZoomState } = useDataZoomState(chartRef)
 
 const totalCount = computed(() => props.categories?.length || 0)
 
+/**
+ * 根据 dataZoom 状态截取可见的 categories
+ */
 const visibleCategories = computed(() => {
   const cats = props.categories || []
   if (!dataZoomState.value || !chartRef.value) return cats
@@ -219,6 +202,9 @@ const visibleCategories = computed(() => {
   return cats.slice(startIndex, endIndex + 1)
 })
 
+/**
+ * 根据 dataZoom 状态截取指定 values 数组的可见部分
+ */
 const getVisibleValues = (values: ChartDataItem[]) => {
   if (!dataZoomState.value || !chartRef.value) return values
   const total = values.length
@@ -227,188 +213,56 @@ const getVisibleValues = (values: ChartDataItem[]) => {
   return values.slice(startIndex, endIndex + 1)
 }
 
-const { tablePosition } = useChartPosition(
-  chartRef,
-  computed(() => visibleCategories.value.length || 0)
-)
-
-const textDivStyle = computed(() => ({ fontSize: 12 }))
-
-const getHeaderLayout = (
-  headerValue: string
-): 'horizontal' | 'vertical' | 'tilted' => {
-  return props.headerLayouts[headerValue]?.layout || props.labelLayout
-}
-
-const getHeaderTiltAngle = (headerValue: string): number => {
-  return props.headerLayouts[headerValue]?.tiltAngle ?? props.labelTiltAngle
-}
-
-const effectiveCategoryLayout = computed((): 'horizontal' | 'vertical' | 'tilted' => {
-  let hasTilted = false
-  let hasVertical = false
-  props.yAxisList?.forEach((yAxis) => {
-    yAxis.headers?.forEach((header) => {
-      const layout = getHeaderLayout(header.value)
-      if (layout === 'tilted') hasTilted = true
-      if (layout === 'vertical') hasVertical = true
-    })
-  })
-  if (hasTilted) return 'tilted'
-  if (hasVertical) return 'vertical'
-  return props.categoryLayout
-})
-
-const effectiveTiltAngle = computed(() => {
-  let maxAngle = props.categoryTiltAngle
-  props.yAxisList?.forEach((yAxis) => {
-    yAxis.headers?.forEach((header) => {
-      const layout = getHeaderLayout(header.value)
-      if (layout === 'tilted') {
-        const angle = getHeaderTiltAngle(header.value)
-        if (angle > maxAngle) maxAngle = angle
-      }
-    })
-  })
-  return maxAngle
-})
-
-const maxTextLength = computed(() => {
-  const cats = visibleCategories.value || []
-  return cats.reduce((max, cat) => Math.max(max, String(cat).length), 0)
-})
-
-const isNarrowMode = ref(false)
-const updateNarrowMode = () => {
-  const w = props.chart?.getDom()?.clientWidth || 0
-  isNarrowMode.value = w > 0 && w < 600
-}
-
-const autoIntervalOptions = computed(() => ({
-  enabled: props.autoInterval,
-  containerWidth: props.chart?.getDom()?.clientWidth || 0,
-  marginLeft: tablePosition.marginLeft,
-  totalColumns: visibleCategories.value?.length || 0,
-  maxTextLength: maxTextLength.value,
-  categoryLayout: effectiveCategoryLayout.value,
-  categoryTiltAngle: effectiveTiltAngle.value,
-  fontSize: textDivStyle.value.fontSize,
-  originWidth: tablePosition.width,
-  narrowMode: isNarrowMode.value
-}))
-
-const { autoColumnWidth, isColumnVisible, calculateVisibleColumns } =
-  useAutoInterval(autoIntervalOptions)
-
-// narrowMode dense grid for vertical rows and merge base
-const denseIntervalOptions = computed(() => ({
-  enabled: props.autoInterval && isNarrowMode.value,
-  containerWidth: props.chart?.getDom()?.clientWidth || 0,
-  marginLeft: tablePosition.marginLeft,
-  totalColumns: visibleCategories.value?.length || 0,
-  maxTextLength: maxTextLength.value,
-  categoryLayout: 'vertical' as const,
-  categoryTiltAngle: 0,
-  fontSize: textDivStyle.value.fontSize,
-  originWidth: tablePosition.width,
-  narrowMode: true
-}))
-
+// 抽离复杂的表格轴布局计算
 const {
-  autoColumnWidth: denseColumnWidth,
-  isColumnVisible: isDenseColumnVisible,
-  calculateVisibleColumns: calculateDenseVisibleColumns
-} = useAutoInterval(denseIntervalOptions)
-
-// narrowMode sparse grid for horizontal/tilted rows to compute merge count
-const sparseIntervalOptions = computed(() => ({
-  enabled: props.autoInterval && isNarrowMode.value,
-  containerWidth: props.chart?.getDom()?.clientWidth || 0,
-  marginLeft: tablePosition.marginLeft,
-  totalColumns: visibleCategories.value?.length || 0,
-  maxTextLength: maxTextLength.value,
-  categoryLayout: 'tilted' as const,
-  categoryTiltAngle: effectiveTiltAngle.value,
-  fontSize: textDivStyle.value.fontSize,
-  originWidth: tablePosition.width,
-  narrowMode: true
-}))
-
-const { autoColumnWidth: sparseColumnWidth } = useAutoInterval(sparseIntervalOptions)
-
-const groupSize = computed(() => {
-  if (!isNarrowMode.value || denseColumnWidth.value <= 0) return 1
-  return Math.max(1, Math.round(sparseColumnWidth.value / denseColumnWidth.value))
+  tablePosition,
+  textDivStyle,
+  getHeaderLayout,
+  getHeaderTiltAngle,
+  isNarrowMode,
+  bindResizeObserver,
+  autoColumnWidth,
+  denseColumnWidth,
+  isColumnVisible,
+  isDenseColumnVisible,
+  calculateVisibleColumns,
+  calculateDenseVisibleColumns,
+  getCellGroups,
+  buildRowHeights,
+  hideChartXAxis
+} = useTableAxis({
+  chart: chartRef,
+  categories: computed(() => visibleCategories.value),
+  headers: computed(() => {
+    // 合并所有 yAxis 的 headers 作为布局计算的参考（去重）
+    const map = new Map<string, TableHeader>()
+    props.yAxisList?.forEach((yAxis) => {
+      yAxis.headers?.forEach((h) => {
+        if (!map.has(h.value)) map.set(h.value, h)
+      })
+    })
+    return Array.from(map.values())
+  }),
+  labelLayout: computed(() => props.labelLayout),
+  labelTiltAngle: computed(() => props.labelTiltAngle),
+  categoryLayout: computed(() => props.categoryLayout),
+  categoryTiltAngle: computed(() => props.categoryTiltAngle),
+  headerLayouts: computed(() => props.headerLayouts),
+  autoInterval: computed(() => props.autoInterval)
 })
 
-const { observe } = useResizeObserver()
-
-const computeCellHeight = (text: string, width: number, layout: 'horizontal' | 'vertical' | 'tilted', angle: number) => {
-  return getDynamicCellStyle(text, width, layout, angle, textDivStyle.value.fontSize).height as number
-}
-
-const getCellGroups = (yAxis: YAxisTableItem, header: TableHeader) => {
-  const values = getVisibleValues(yAxis.values)
-  const groups: { text: string; width: number }[] = []
-  const size = groupSize.value
-  const cols = visibleCategories.value.map((_, idx) => idx).filter(idx => isDenseColumnVisible(idx))
-  for (let i = 0; i < cols.length; i += size) {
-    const chunk = cols.slice(i, i + size)
-    const firstIdx = chunk[0]
-    const text = String(values?.[firstIdx]?.[header.value] || '')
-    groups.push({
-      text,
-      width: denseColumnWidth.value * chunk.length
-    })
-  }
-  return groups
-}
-
-const getRowHeight = (yAxis: YAxisTableItem, header: TableHeader) => {
-  const layout = getHeaderLayout(header.value)
-  const angle = getHeaderTiltAngle(header.value)
-  let maxH = computeCellHeight('', tablePosition.marginLeft, layout, angle)
-  const values = getVisibleValues(yAxis.values)
-  if (isNarrowMode.value && layout !== 'vertical' && layout !== 'horizontal') {
-    const groups = getCellGroups(yAxis, header)
-    groups.forEach((g) => {
-      const h = computeCellHeight(g.text, g.width, layout, angle)
-      if (h > maxH) maxH = h
-    })
-  } else {
-    const visibleFn = isNarrowMode.value ? isDenseColumnVisible : isColumnVisible
-    const width = isNarrowMode.value ? denseColumnWidth.value : autoColumnWidth.value
-    visibleCategories.value.forEach((_, idx) => {
-      if (!visibleFn(idx)) return
-      const text = String(values?.[idx]?.[header.value] || '')
-      const h = computeCellHeight(text, width, layout, angle)
-      if (h > maxH) maxH = h
-    })
-  }
-  return maxH
-}
-
+// 为每个 yAxis 的每个 header 计算行高
 const rowHeights = computed(() => {
   const heights: Record<string, number> = {}
   props.yAxisList?.forEach((yAxis, yIndex) => {
-    yAxis.headers?.forEach((header) => {
-      const key = `${yIndex}-${header.value}`
-      heights[key] = getRowHeight(yAxis, header)
-    })
+    const visibleValues = getVisibleValues(yAxis.values)
+    const axisHeights = buildRowHeights(visibleValues, (header) => `${yIndex}-${header.value}`)
+    Object.assign(heights, axisHeights)
   })
   return heights
 })
 
-const hideChartXAxis = () => {
-  props.chart?.setOption({
-    xAxis: {
-      axisLabel: { show: false },
-      axisTick: { show: false },
-      axisLine: { show: false }
-    }
-  })
-}
-
+// 数据变化时隐藏原生 X 轴并重新计算列宽
 watch(
   visibleCategories,
   (data) => {
@@ -421,16 +275,12 @@ watch(
   { immediate: true }
 )
 
+// 监听 chart 实例变化，绑定 ResizeObserver
 watch(
   () => props.chart,
   (chart) => {
-    if (chart?.getDom()) {
-      updateNarrowMode()
-      observe(chart.getDom(), () => {
-        calculateVisibleColumns()
-        calculateDenseVisibleColumns()
-        updateNarrowMode()
-      })
+    if (chart) {
+      bindResizeObserver()
     }
   }
 )

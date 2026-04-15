@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-// No setup logic needed
+// Home 页面：暂无额外逻辑，仅作为项目入口展示
 </script>
 
 <style scoped>

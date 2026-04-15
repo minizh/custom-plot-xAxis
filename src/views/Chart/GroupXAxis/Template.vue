@@ -12,12 +12,11 @@
 
 <script setup>
 import { useECharts } from '@/composables/useECharts'
-import { onMounted, ref } from 'vue'
+import { useChartDemo } from '@/composables/useChartDemo'
+import { ref, computed } from 'vue'
 import GroupXAxis from './GroupXAxis.vue'
 
 const chartRef = ref(null)
-const chartData = ref()
-const xAxisData = ref()
 const { chartInstance, setChartOption } = useECharts(chartRef)
 
 const testData = [
@@ -33,6 +32,9 @@ const testData = [
   { productId: '0002A', lotId: '0004', waferId: '0001A10' }
 ]
 
+/**
+ * 生成演示数据：categories + 带 waferId 等附加信息的 values
+ */
 const generateData = () => {
   const categories = []
   const values = []
@@ -43,52 +45,18 @@ const generateData = () => {
       value: Math.floor(Math.random() * 100) + 20
     })
   }
-  chartData.value = { categories, values }
-  xAxisData.value = values
+  return { categories, values }
 }
 
-const getOption = () => ({
-  title: { text: '折线图示例', left: 'center' },
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: { type: 'cross' },
-    formatter: (params) => {
-      const { name, value } = params[0]
-      return `waferId:${name},value:${value}`
-    }
-  },
-  legend: { data: ['数值'], top: 30 },
-  grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
-  xAxis: {
-    type: 'category',
-    data: chartData.value.categories,
-    axisLabel: { rotate: 45 }
-  },
-  yAxis: { type: 'value', name: '数值' },
-  dataZoom: [
-    {
-      type: 'inside',
-      xAxisIndex: 0,
-      zoomOnMouseWheel: true,
-      moveOnMouseWheel: true,
-      moveOnMouseMove: true,
-      throttle: 100
-    }
-  ],
-  series: [
-    {
-      name: '数值',
-      type: 'line',
-      data: chartData.value.values.map((item) => item.value),
-      itemStyle: { color: '#409eff' }
-    }
-  ]
-})
+// 使用封装好的 Composable 处理数据生成和图表挂载
+const { chartData, generateData: demoGenerateData } = useChartDemo(
+  setChartOption,
+  '折线图示例',
+  generateData
+)
 
-onMounted(() => {
-  generateData()
-  setChartOption(getOption())
-})
+// xAxisData 取 values 数组传给 GroupXAxis
+const xAxisData = computed(() => chartData.value?.values || [])
 </script>
 
 <style scoped>

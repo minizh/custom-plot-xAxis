@@ -14,13 +14,16 @@
 
 <script setup>
 import { useECharts } from '@/composables/useECharts'
-import { onMounted, ref } from 'vue'
+import { useChartDemo } from '@/composables/useChartDemo'
+import { ref } from 'vue'
 import TableXAxis from './TableXAxis.vue'
 
 const chartRef = ref(null)
-const chartData = ref()
 const { chartInstance, setChartOption } = useECharts(chartRef)
 
+/**
+ * 生成演示数据：30 条 categories + 带 sum/avg 统计字段的 values
+ */
 const generateData = () => {
   const categories = []
   const values = []
@@ -33,51 +36,15 @@ const generateData = () => {
       avg: Math.floor(Math.random() * 100)
     })
   }
-  chartData.value = { categories, values }
+  return { categories, values }
 }
 
-const getOption = () => ({
-  title: { text: '折线图示例', left: 'center' },
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: { type: 'cross' },
-    formatter: (params) => {
-      const { name, value } = params[0]
-      return `waferId:${name},value:${value}`
-    }
-  },
-  legend: { data: ['数值'], top: 30 },
-  grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
-  xAxis: {
-    type: 'category',
-    data: chartData.value.categories,
-    axisLabel: { rotate: 45 }
-  },
-  yAxis: { type: 'value', name: '数值' },
-  dataZoom: [
-    {
-      type: 'inside',
-      xAxisIndex: 0,
-      zoomOnMouseWheel: true,
-      moveOnMouseWheel: true,
-      moveOnMouseMove: true,
-      throttle: 100
-    }
-  ],
-  series: [
-    {
-      name: '数值',
-      type: 'line',
-      data: chartData.value.values.map((item) => item.value),
-      itemStyle: { color: '#409eff' }
-    }
-  ]
-})
-
-onMounted(() => {
-  generateData()
-  setChartOption(getOption())
-})
+// 使用 Composable 统一处理数据生成和图表 option 设置
+const { chartData } = useChartDemo(
+  setChartOption,
+  '折线图示例',
+  generateData
+)
 </script>
 
 <style scoped>
