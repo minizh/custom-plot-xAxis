@@ -19,13 +19,13 @@
               <div
                 v-if="isColumnVisible(index)"
                 class="table-cell-div"
-                :style="{ width: `${autoColumnWidth}px` }"
+                :style="getDynamicCellStyle(String(item), autoColumnWidth, categoryLayout, categoryTiltAngle, textDivStyle.fontSize)"
               >
                 <TextDiv
                   :text="item"
                   :layout="categoryLayout"
                   :width="autoColumnWidth"
-                  :height="32"
+                  :height="getDynamicCellStyle(String(item), autoColumnWidth, categoryLayout, categoryTiltAngle, textDivStyle.fontSize).height"
                   :font-size="textDivStyle.fontSize"
                   :tilt-angle="categoryTiltAngle"
                   :truncate="false"
@@ -42,13 +42,13 @@
           >
             <div
               class="table-cell-div table-label-cell no-bg-no-border"
-              :style="{ width: `${tablePosition.marginLeft}px` }"
+              :style="getDynamicCellStyle(item.label, tablePosition.marginLeft, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize)"
             >
               <TextDiv
                 :text="item.label"
                 :layout="getHeaderLayout(item.value)"
                 :width="tablePosition.marginLeft"
-                :height="32"
+                :height="getDynamicCellStyle(item.label, tablePosition.marginLeft, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize).height"
                 :font-size="textDivStyle.fontSize"
                 :tilt-angle="getHeaderTiltAngle(item.value)"
               />
@@ -62,7 +62,7 @@
                   v-if="isColumnVisible(index)"
                   class="table-cell-div"
                   :style="{
-                    width: `${autoColumnWidth}px`,
+                    ...getDynamicCellStyle(String(getVisibleValues(yAxis.values)?.[index]?.[item.value] || ''), autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize),
                     backgroundColor: yAxis.bgColor || 'transparent'
                   }"
                 >
@@ -70,7 +70,7 @@
                     :text="String(getVisibleValues(yAxis.values)?.[index]?.[item.value] || '')"
                     :layout="getHeaderLayout(item.value)"
                     :width="autoColumnWidth"
-                    :height="32"
+                    :height="getDynamicCellStyle(String(getVisibleValues(yAxis.values)?.[index]?.[item.value] || ''), autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize).height"
                     :font-size="textDivStyle.fontSize"
                     :tilt-angle="getHeaderTiltAngle(item.value)"
                   />
@@ -92,6 +92,7 @@ import { useResizeObserver } from '@/composables/useResizeObserver'
 import type { ChartDataItem, HeaderLayout, TableHeader } from '@/types/echarts'
 import type { ECharts } from 'echarts'
 import { computed, ref, toRef, watch } from 'vue'
+import { getDynamicCellStyle } from '@/utils/chart-util'
 
 export interface YAxisTableItem {
   name: string
@@ -262,12 +263,6 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 0;
-}
-
-.layout-vertical .table-cell-div,
-.layout-tilted .table-cell-div {
-  padding: 6px 0;
 }
 
 .table-label-cell {

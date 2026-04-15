@@ -138,3 +138,31 @@ export const calculateLabelDisplay = (N: number, max: number): number[] => {
 
   return bestSeq.length > 0 ? bestSeq : [0]
 }
+
+export const getDynamicCellStyle = (
+  text: string,
+  width: number,
+  layout: 'horizontal' | 'vertical' | 'tilted',
+  tiltAngle: number,
+  fontSize: number
+) => {
+  const charWidth = fontSize * 0.55
+  const textWidth = String(text).length * charWidth
+  let contentHeight = fontSize
+  if (layout === 'vertical') {
+    contentHeight = textWidth
+  } else if (layout === 'tilted') {
+    const radian = (tiltAngle * Math.PI) / 180
+    contentHeight = textWidth * Math.sin(radian)
+  }
+  const clearance = layout === 'horizontal' ? 2 : 3
+  const minHeight = layout === 'horizontal' ? fontSize : 28
+  const targetHeight = Math.max(minHeight, Math.ceil(contentHeight + clearance * 2))
+  const padding = Math.max(0, Math.round((targetHeight - contentHeight) / 2))
+  return {
+    width: `${width}px`,
+    minHeight: `${targetHeight}px`,
+    height: targetHeight,
+    padding: `${padding}px 0`
+  }
+}
