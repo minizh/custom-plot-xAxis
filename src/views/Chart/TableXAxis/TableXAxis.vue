@@ -1,6 +1,9 @@
 <template>
-  <div :style="{ position: 'relative' }">
-    <div v-if="visibleData?.categories?.length" :style="{ display: 'flex' }">
+  <div :class="`layout-${categoryLayout}`" :style="{ position: 'relative' }">
+    <div
+      v-if="showCategoryRow && visibleData?.categories?.length"
+      :style="{ display: 'flex' }"
+    >
       <div
         :style="{
           display: 'flex',
@@ -23,6 +26,7 @@
               :height="32"
               :font-size="textDivStyle.fontSize"
               :tilt-angle="categoryTiltAngle"
+              :truncate="false"
             />
           </div>
         </template>
@@ -94,6 +98,7 @@ const props = withDefaults(
     categoryTiltAngle?: number
     headerLayouts?: Record<string, HeaderLayout>
     autoInterval?: boolean
+    showCategoryRow?: boolean
   }>(),
   {
     headers: () => [],
@@ -104,7 +109,8 @@ const props = withDefaults(
     categoryLayout: 'horizontal',
     categoryTiltAngle: 45,
     headerLayouts: () => ({}),
-    autoInterval: true
+    autoInterval: true,
+    showCategoryRow: true
   }
 )
 
@@ -188,6 +194,12 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 2px 0;
+}
+
+.layout-vertical .table-cell-div,
+.layout-tilted .table-cell-div {
+  padding: 6px 0;
 }
 
 .table-label-cell {

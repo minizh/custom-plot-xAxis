@@ -21,10 +21,12 @@ const props = withDefaults(
     layout: 'horizontal' | 'vertical' | 'tilted'
     fontSize: number
     tiltAngle?: number
+    truncate?: boolean
   }>(),
   {
     layout: 'horizontal',
-    tiltAngle: 45
+    tiltAngle: 45,
+    truncate: true
   }
 )
 
@@ -33,8 +35,6 @@ const props = withDefaults(
 
 const containerStyle = computed(() => {
   if (props.layout === 'vertical') {
-    // After rotating 90deg, the "width" needed is the text occupied "height"
-    // Estimate: text length * single char width
     const charWidth = props.fontSize * 0.55
     const textWidth = String(props.text).length * charWidth
     return {
@@ -45,16 +45,10 @@ const containerStyle = computed(() => {
   }
 
   if (props.layout === 'tilted') {
-    // Height needs to accommodate tilted text
-    // text length * cos(angle) = horizontal occupation
-    // text length * sin(angle) = vertical occupation
-    // But container has fixed width, so need comprehensive calculation
     const charWidth = props.fontSize * 0.55
     const textWidth = String(props.text).length * charWidth
-    // Vertical space occupied after tilting
     const tiltRadian = (props.tiltAngle * Math.PI) / 180
     const verticalSpace = textWidth * Math.sin(tiltRadian)
-    // Base height + tilted extra space
     const extraHeight = Math.max(0, verticalSpace - props.width * 0.3)
     return {
       width: `${props.width}px`,
@@ -73,10 +67,7 @@ const containerStyle = computed(() => {
 
 const getTextStyle = () => {
   if (props.layout === 'vertical') {
-    return {
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
+    const base: Record<string, string> = {
       width: `${props.height - 4}px`,
       textAlign: 'center',
       position: 'absolute',
@@ -85,29 +76,45 @@ const getTextStyle = () => {
       transform: 'translate(-50%, -50%) rotate(-90deg)',
       transformOrigin: 'center center'
     }
+    if (props.truncate) {
+      base.whiteSpace = 'nowrap'
+      base.overflow = 'hidden'
+      base.textOverflow = 'ellipsis'
+    }
+    return base
   }
 
   if (props.layout === 'tilted') {
-    return {
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
+    const base: Record<string, string> = {
       position: 'absolute',
       top: '50%',
       left: '50%',
       transform: `translate(-50%, -50%) rotate(-${props.tiltAngle}deg)`,
       transformOrigin: 'center center',
-      maxWidth: `${props.height - 4}px`,
       textAlign: 'center'
     }
+    if (props.truncate) {
+      base.whiteSpace = 'nowrap'
+      base.overflow = 'hidden'
+      base.textOverflow = 'ellipsis'
+      base.maxWidth = `${props.height - 4}px`
+    }
+    return base
   }
 
   // horizontal
+  if (props.truncate) {
+    return {
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      maxWidth: '100%',
+      textAlign: 'center'
+    }
+  }
   return {
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    maxWidth: '100%',
+    whiteSpace: 'normal',
+    wordBreak: 'break-all',
     textAlign: 'center'
   }
 }

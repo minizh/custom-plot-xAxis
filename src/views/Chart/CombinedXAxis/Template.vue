@@ -33,6 +33,11 @@
           <input v-model="tableXAxisConfig.autoInterval" type="checkbox" />
           <span>（空间不足时自动间隔显示）</span>
         </div>
+        <div class="config-item">
+          <label>显示类别行：</label>
+          <input v-model="tableXAxisConfig.showCategoryRow" type="checkbox" />
+          <span>（是否显示 category 行）</span>
+        </div>
         <div class="config-subsection">
           <h5>类别行 (categories)</h5>
           <div class="config-item">
@@ -113,6 +118,7 @@
         :category-tilt-angle="tableXAxisConfig.categoryTiltAngle"
         :header-layouts="tableXAxisConfig.headerLayouts"
         :auto-interval="tableXAxisConfig.autoInterval"
+        :show-category-row="tableXAxisConfig.showCategoryRow"
       />
     </div>
   </div>
@@ -148,6 +154,7 @@ const groupXAxisConfig = reactive({
 
 const tableXAxisConfig = reactive({
   autoInterval: true,
+  showCategoryRow: true,
   categoryLayout: 'horizontal',
   categoryTiltAngle: 45,
   headerLayouts: {
