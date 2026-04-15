@@ -1,7 +1,7 @@
 <template>
   <div class="chart-container">
     <el-button class="config-btn" type="primary" @click="dialogVisible = true">
-      配置统计值表格
+      配置
     </el-button>
 
     <div ref="chartRef" class="chart"></div>
@@ -16,7 +16,7 @@
 
     <el-dialog
       v-model="dialogVisible"
-      title="统计值表格配置"
+      title="多Y轴统计值表格配置"
       width="720px"
       :close-on-click-modal="false"
     >
@@ -72,6 +72,31 @@
         </el-button>
 
         <div class="config-section-title" style="margin-top: 24px">
+          Y轴配置
+        </div>
+        <div
+          v-for="(label, index) in yAxisLabels"
+          :key="index"
+          class="yaxis-config-row"
+        >
+          <div class="row-index">{{ index + 1 }}</div>
+          <el-form-item label="Y轴 Label" class="flex-item">
+            <el-input v-model="yAxisLabels[index]" style="width: 200px" />
+          </el-form-item>
+          <el-button
+            type="danger"
+            size="small"
+            :disabled="yAxisLabels.length <= 1"
+            @click="removeYAxisLabel(index)"
+          >
+            删除
+          </el-button>
+        </div>
+        <el-button type="primary" size="small" @click="addYAxisLabel">
+          + 新增Y轴
+        </el-button>
+
+        <div class="config-section-title" style="margin-top: 24px">
           背景色配置
         </div>
         <el-form-item>
@@ -83,7 +108,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="dialogVisible = false">确定</el-button>
+        <el-button type="primary" @click="handleConfirm">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -125,7 +150,18 @@ const statConfigs = ref([
   { statFunc: 'min', orientation: 'horizontal', customAngle: 45 }
 ])
 
-const legendColors = ['#5470c6', '#91cc75']
+const yAxisLabels = ref(['数值', '比率'])
+
+const legendColors = [
+  '#5470c6',
+  '#91cc75',
+  '#fac858',
+  '#ee6666',
+  '#73c0de',
+  '#3ba272',
+  '#fc8452',
+  '#9a60b4'
+]
 
 const addStatConfig = () => {
   statConfigs.value.push({
@@ -138,6 +174,15 @@ const addStatConfig = () => {
 const removeStatConfig = (index) => {
   if (statConfigs.value.length <= 1) return
   statConfigs.value.splice(index, 1)
+}
+
+const addYAxisLabel = () => {
+  yAxisLabels.value.push(`Y轴${yAxisLabels.value.length + 1}`)
+}
+
+const removeYAxisLabel = (index) => {
+  if (yAxisLabels.value.length <= 1) return
+  yAxisLabels.value.splice(index, 1)
 }
 
 const computedHeaders = computed(() => {
@@ -162,42 +207,31 @@ const computedHeaderLayouts = computed(() => {
 const computedYAxisList = computed(() => {
   const headers = computedHeaders.value
   const baseValues = rawValues.value
-  if (!baseValues.length || !headers.length) return []
+  const labels = yAxisLabels.value
+  if (!baseValues.length || !headers.length || !labels.length) return []
 
-  const values1 = baseValues.map((item) => {
-    const obj = { name: item.name }
-    headers.forEach((h) => {
-      obj[h.value] = item[h.label] ?? ''
+  return labels.map((label, idx) => {
+    const values = baseValues.map((item) => {
+      const obj = { name: item.name }
+      headers.forEach((h) => {
+        const raw = item[h.label] ?? 0
+        obj[h.value] = Math.floor(raw * (1 + idx * 0.3)) + idx * 10
+      })
+      return obj
     })
-    return obj
-  })
 
-  const values2 = baseValues.map((item) => {
-    const obj = { name: item.name }
-    headers.forEach((h) => {
-      const raw = item[h.label] ?? 0
-      obj[h.value] = Math.floor(raw * 1.5) + 10
-    })
-    return obj
-  })
+    const bgColor =
+      bgColorMode.value === 'gray'
+        ? '#f5f5f5'
+        : legendColors[idx % legendColors.length]
 
-  const bg1 = bgColorMode.value === 'gray' ? '#f5f5f5' : legendColors[0]
-  const bg2 = bgColorMode.value === 'gray' ? '#f5f5f5' : legendColors[1]
-
-  return [
-    {
-      name: 'Y轴1-数值',
+    return {
+      name: label,
       headers,
-      values: values1,
-      bgColor: bg1
-    },
-    {
-      name: 'Y轴2-比率',
-      headers,
-      values: values2,
-      bgColor: bg2
+      values,
+      bgColor
     }
-  ]
+  })
 })
 
 const generateData = () => {
@@ -222,64 +256,63 @@ const generateData = () => {
   rawValues.value = vals
 }
 
-const getOption = () => ({
-  title: { text: '多Y轴 + 统计值表示例', left: 'center' },
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: { type: 'cross' }
-  },
-  legend: { data: ['数值', '比率'], top: 30 },
-  grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
-  xAxis: {
-    type: 'category',
-    data: categories.value,
-    axisLabel: { show: false },
-    axisTick: { show: false },
-    axisLine: { show: false }
-  },
-  yAxis: [
-    {
-      type: 'value',
-      name: '数值',
-      position: 'left',
-      axisLine: { show: true, lineStyle: { color: legendColors[0] } },
-      axisLabel: { color: legendColors[0] }
+const getOption = () => {
+  const labels = yAxisLabels.value
+  const yAxis = labels.map((label, idx) => ({
+    type: 'value',
+    name: label,
+    position: idx % 2 === 0 ? 'left' : 'right',
+    axisLine: {
+      show: true,
+      lineStyle: { color: legendColors[idx % legendColors.length] }
     },
-    {
-      type: 'value',
-      name: '比率',
-      position: 'right',
-      axisLine: { show: true, lineStyle: { color: legendColors[1] } },
-      axisLabel: { color: legendColors[1] }
-    }
-  ],
-  dataZoom: [
-    {
-      type: 'inside',
-      xAxisIndex: 0,
-      zoomOnMouseWheel: true,
-      moveOnMouseWheel: true,
-      moveOnMouseMove: true,
-      throttle: 100
-    }
-  ],
-  series: [
-    {
-      name: '数值',
-      type: 'line',
-      yAxisIndex: 0,
-      data: rawValues.value.map((item) => item.value),
-      itemStyle: { color: legendColors[0] }
+    axisLabel: { color: legendColors[idx % legendColors.length] }
+  }))
+
+  const series = labels.map((label, idx) => ({
+    name: label,
+    type: 'line',
+    yAxisIndex: idx,
+    data: rawValues.value.map((item) =>
+      Math.floor(item.value * (1 + idx * 0.3)) + idx * 10
+    ),
+    itemStyle: { color: legendColors[idx % legendColors.length] }
+  }))
+
+  return {
+    title: { text: '多Y轴 + 统计值表示例', left: 'center' },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'cross' }
     },
-    {
-      name: '比率',
-      type: 'line',
-      yAxisIndex: 1,
-      data: rawValues.value.map((item) => Math.floor(item.value * 1.8) + 20),
-      itemStyle: { color: legendColors[1] }
-    }
-  ]
-})
+    legend: { data: labels, top: 30 },
+    grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: categories.value,
+      axisLabel: { show: false },
+      axisTick: { show: false },
+      axisLine: { show: false }
+    },
+    yAxis,
+    dataZoom: [
+      {
+        type: 'inside',
+        xAxisIndex: 0,
+        zoomOnMouseWheel: true,
+        moveOnMouseWheel: true,
+        moveOnMouseMove: true,
+        throttle: 100
+      }
+    ],
+    series
+  }
+}
+
+const handleConfirm = () => {
+  setChartOption(getOption())
+  dialogVisible.value = false
+}
 
 onMounted(() => {
   generateData()
@@ -309,7 +342,8 @@ onMounted(() => {
   color: #303133;
 }
 
-.stat-config-row {
+.stat-config-row,
+.yaxis-config-row {
   display: flex;
   align-items: flex-end;
   gap: 12px;
