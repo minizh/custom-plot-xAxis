@@ -6,6 +6,7 @@ export interface AutoIntervalOptions {
   marginLeft: number
   totalColumns: number
   maxTextLength: number
+  maxCellTextLength?: number
   categoryLayout: 'horizontal' | 'vertical' | 'tilted'
   categoryTiltAngle: number
   fontSize: number
@@ -66,10 +67,15 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
       return
     }
 
+    const textLength = Math.max(
+      opts.maxTextLength,
+      opts.maxCellTextLength || 0
+    )
+
     const labelWidth = calculateLabelWidth(
       opts.categoryLayout,
       opts.categoryTiltAngle,
-      opts.maxTextLength
+      textLength
     )
 
     // 可用宽度 = 容器宽 - 左边距 - 预留边距
@@ -80,6 +86,14 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
         minCellWidth = Math.ceil(labelWidth * 1.2 + 4)
       } else if (opts.categoryLayout === 'vertical') {
         minCellWidth = labelWidth
+      }
+      // narrowMode 下，兜底约束 horizontal 布局的单元格文本宽度
+      // 防止数据行因列宽过小而文本重叠
+      if (opts.maxCellTextLength && opts.maxCellTextLength > 0) {
+        const horizontalWidth = opts.maxCellTextLength * charWidth.value + 4
+        if (horizontalWidth > minCellWidth) {
+          minCellWidth = horizontalWidth
+        }
       }
     }
 
@@ -114,7 +128,7 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
 
     visibleColumns.value = selectedIndices.sort((a, b) => a - b)
     autoColumnWidth.value = Math.max(
-      labelWidth,
+      Math.ceil(labelWidth),
       Math.floor(availableWidth / visibleCount)
     )
   }

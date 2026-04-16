@@ -32,4 +32,5 @@ export interface HeaderLayout {
 export interface TableHeader {
   value: string
   label: string
+  format?: number
 }

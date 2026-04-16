@@ -39,6 +39,8 @@ export interface TableAxisOptions {
   headerLayouts?: Ref<Record<string, HeaderLayout>>
   /** 是否开启自动间隔 */
   autoInterval?: Ref<boolean>
+  /** 单元格内容的最大文本长度（用于 autoInterval 计算列宽） */
+  maxCellTextLength?: Ref<number>
 }
 
 /**
@@ -138,6 +140,7 @@ export function useTableAxis(options: TableAxisOptions) {
     marginLeft: tablePosition.marginLeft,
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
+    maxCellTextLength: options.maxCellTextLength?.value || 0,
     categoryLayout: effectiveCategoryLayout.value,
     categoryTiltAngle: effectiveTiltAngle.value,
     fontSize: textDivStyle.value.fontSize,
@@ -157,6 +160,7 @@ export function useTableAxis(options: TableAxisOptions) {
     marginLeft: tablePosition.marginLeft,
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
+    maxCellTextLength: options.maxCellTextLength?.value || 0,
     categoryLayout: 'vertical' as const,
     categoryTiltAngle: 0,
     fontSize: textDivStyle.value.fontSize,
@@ -179,6 +183,7 @@ export function useTableAxis(options: TableAxisOptions) {
     marginLeft: tablePosition.marginLeft,
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
+    maxCellTextLength: options.maxCellTextLength?.value || 0,
     categoryLayout: 'tilted' as const,
     categoryTiltAngle: effectiveTiltAngle.value,
     fontSize: textDivStyle.value.fontSize,

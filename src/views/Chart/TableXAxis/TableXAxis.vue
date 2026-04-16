@@ -177,6 +177,22 @@ const chartDataRef = toRef(props, 'chartData')
 // 通过 dataZoom 同步获取当前可见的数据切片
 const { visibleData } = useChartDataZoom(chartRef, chartDataRef)
 
+/**
+ * 计算当前可见数据中，单元格内容的最大文本长度
+ */
+const maxCellTextLength = computed(() => {
+  let max = 0
+  const values = visibleData.value?.values || []
+  const headers = props.headers || []
+  values.forEach((item) => {
+    headers.forEach((h) => {
+      const text = String(item[h.value] ?? '')
+      if (text.length > max) max = text.length
+    })
+  })
+  return max
+})
+
 // 提取 TableXAxis 中复杂的布局计算逻辑到 Composable
 const {
   tablePosition,
@@ -198,6 +214,7 @@ const {
   chart: chartRef,
   categories: computed(() => visibleData.value?.categories || []),
   headers: computed(() => props.headers),
+  maxCellTextLength,
   labelLayout: computed(() => props.labelLayout),
   labelTiltAngle: computed(() => props.labelTiltAngle),
   categoryLayout: computed(() => props.categoryLayout),
@@ -241,6 +258,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .table-label-cell {

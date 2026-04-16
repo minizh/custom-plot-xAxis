@@ -213,6 +213,24 @@ const getVisibleValues = (values: ChartDataItem[]) => {
   return values.slice(startIndex, endIndex + 1)
 }
 
+/**
+ * 计算当前可见数据中，单元格内容的最大文本长度
+ * 用于 autoInterval 在 format 后仍能正确计算列宽，防止文本重叠
+ */
+const maxCellTextLength = computed(() => {
+  let max = 0
+  props.yAxisList?.forEach((yAxis) => {
+    const visibleValues = getVisibleValues(yAxis.values)
+    yAxis.headers?.forEach((h) => {
+      visibleValues.forEach((item) => {
+        const text = String(item[h.value] ?? '')
+        if (text.length > max) max = text.length
+      })
+    })
+  })
+  return max
+})
+
 // 抽离复杂的表格轴布局计算
 const {
   tablePosition,
@@ -243,6 +261,7 @@ const {
     })
     return Array.from(map.values())
   }),
+  maxCellTextLength,
   labelLayout: computed(() => props.labelLayout),
   labelTiltAngle: computed(() => props.labelTiltAngle),
   categoryLayout: computed(() => props.categoryLayout),
@@ -302,6 +321,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .table-label-cell {

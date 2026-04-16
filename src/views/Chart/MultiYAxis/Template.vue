@@ -58,6 +58,16 @@
               style="width: 100px"
             />
           </el-form-item>
+          <el-form-item label="Format" class="flex-item">
+            <el-input-number
+              v-model="item.format"
+              :min="0"
+              :precision="0"
+              size="small"
+              style="width: 90px"
+              placeholder="小数位"
+            />
+          </el-form-item>
           <el-button
             type="danger"
             size="small"
@@ -147,10 +157,10 @@ const statFuncOptions = [
 
 // 统计列配置（决定 MultiYAxisTable 中显示哪些列及其布局）
 const statConfigs = ref([
-  { statFunc: 'sum', orientation: 'horizontal', customAngle: 45 },
-  { statFunc: 'avg', orientation: 'horizontal', customAngle: 45 },
-  { statFunc: 'max', orientation: 'horizontal', customAngle: 45 },
-  { statFunc: 'min', orientation: 'horizontal', customAngle: 45 }
+  { statFunc: 'sum', orientation: 'horizontal', customAngle: 45, format: undefined },
+  { statFunc: 'avg', orientation: 'horizontal', customAngle: 45, format: undefined },
+  { statFunc: 'max', orientation: 'horizontal', customAngle: 45, format: undefined },
+  { statFunc: 'min', orientation: 'horizontal', customAngle: 45, format: undefined }
 ])
 
 // Y轴标签配置
@@ -172,7 +182,8 @@ const addStatConfig = () => {
   statConfigs.value.push({
     statFunc: 'sum',
     orientation: 'horizontal',
-    customAngle: 45
+    customAngle: 45,
+    format: undefined
   })
 }
 
@@ -196,7 +207,8 @@ const removeYAxisLabel = (index) => {
 const computedHeaders = computed(() => {
   return statConfigs.value.map((cfg, index) => ({
     value: cfg.statFunc + '_' + index,
-    label: cfg.statFunc
+    label: cfg.statFunc,
+    format: cfg.format
   }))
 })
 
@@ -231,7 +243,11 @@ const computedYAxisList = computed(() => {
       headers.forEach((h) => {
         const raw = item[h.label] ?? 0
         // 为不同 Y 轴引入差异化数据，使折线不重叠
-        obj[h.value] = Math.floor(raw * (1 + idx * 0.3)) + idx * 10
+        let val = Math.floor(raw * (1 + idx * 0.3)) + idx * 10
+        if (h.format !== undefined && h.format !== null) {
+          val = Number(val).toFixed(h.format)
+        }
+        obj[h.value] = val
       })
       return obj
     })
