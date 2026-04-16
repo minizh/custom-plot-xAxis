@@ -94,7 +94,7 @@
                     class="table-cell-div"
                     :style="{
                       ...getDynamicCellStyle(String(getVisibleValues(yAxis.values)?.[index]?.[item.value] || ''), isNarrowMode ? denseColumnWidth : autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[`${yIndex}-${item.value}`]),
-                      backgroundColor: yAxis.bgColor || 'transparent'
+                      backgroundColor: yAxis.cellBgColors?.[visibleStartIndex + index] ?? yAxis.bgColor ?? 'transparent'
                     }"
                   >
                     <TextDiv
@@ -117,7 +117,7 @@
                   class="table-cell-div"
                   :style="{
                     ...getDynamicCellStyle(group.text, group.width, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[`${yIndex}-${item.value}`]),
-                    backgroundColor: yAxis.bgColor || 'transparent',
+                    backgroundColor: getGroupBgColor(yAxis, gIdx),
                     width: `${group.width}px`
                   }"
                 >
@@ -154,6 +154,7 @@ export interface YAxisTableItem {
   headers: TableHeader[]
   values: ChartDataItem[]
   bgColor?: string
+  cellBgColors?: string[]
 }
 
 const props = withDefaults(
@@ -231,6 +232,30 @@ const maxCellTextLength = computed(() => {
   return max
 })
 
+/**
+ * 可见区域的 starting index（用于映射 cellBgColors）
+ */
+const visibleStartIndex = computed(() => {
+  const cats = props.categories || []
+  if (!dataZoomState.value || !chartRef.value) return 0
+  const total = cats.length
+  return Math.max(0, Math.round((dataZoomState.value.start / 100) * (total - 1)))
+})
+
+/**
+ * 获取窄屏合并单元格的背景色（取组内第一个可见列的颜色）
+ */
+const getGroupBgColor = (yAxis: YAxisTableItem, gIdx: number) => {
+  if (!yAxis.cellBgColors?.length) return yAxis.bgColor ?? 'transparent'
+  const size = groupSize.value
+  const cols = (props.categories || [])
+    .map((_, idx) => idx)
+    .filter((idx) => isDenseColumnVisible(idx))
+  const firstIdx = cols[gIdx * size]
+  if (firstIdx === undefined) return yAxis.bgColor ?? 'transparent'
+  return yAxis.cellBgColors[firstIdx] ?? yAxis.bgColor ?? 'transparent'
+}
+
 // 抽离复杂的表格轴布局计算
 const {
   tablePosition,
@@ -246,6 +271,7 @@ const {
   calculateVisibleColumns,
   calculateDenseVisibleColumns,
   getCellGroups,
+  groupSize,
   buildRowHeights,
   hideChartXAxis
 } = useTableAxis({

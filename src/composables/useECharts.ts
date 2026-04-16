@@ -36,8 +36,8 @@ export function useECharts(
   /**
    * 手动设置/更新图表配置
    */
-  const setChartOption = (option: EChartsOption) => {
-    chartInstance.value?.setOption(option)
+  const setChartOption = (option: EChartsOption, notMerge = false) => {
+    chartInstance.value?.setOption(option, notMerge)
   }
 
   onMounted(initChart)
