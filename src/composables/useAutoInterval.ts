@@ -78,8 +78,12 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
       textLength
     )
 
-    // 可用宽度 = 容器宽 - 左边距 - 预留边距
-    const availableWidth = opts.containerWidth - opts.marginLeft - 20
+    // 可用宽度优先取 grid 总宽度（originWidth * totalColumns），
+    // 确保统计值表格数据列总宽度始终与 chart X 轴宽度保持一致
+    const availableWidth =
+      opts.originWidth > 0
+        ? opts.originWidth * opts.totalColumns
+        : opts.containerWidth - opts.marginLeft - 20
     let minCellWidth = labelWidth + 4
     if (opts.narrowMode) {
       if (opts.categoryLayout === 'tilted') {
@@ -103,7 +107,11 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
         { length: opts.totalColumns },
         (_, i) => i
       )
-      autoColumnWidth.value = opts.originWidth
+      // 兜底：当 narrowMode 下内容过长时，列宽不应小于 minCellWidth
+      autoColumnWidth.value = Math.max(
+        opts.originWidth,
+        Math.ceil(minCellWidth)
+      )
       return
     }
 

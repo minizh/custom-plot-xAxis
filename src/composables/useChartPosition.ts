@@ -46,13 +46,24 @@ export function useChartPosition(
 
   /**
    * 计算单个数据点在网格中的像素宽度，并更新 tablePosition
-   * tablePosition 表示：第一个数据点左边缘到第二个数据点左边缘的宽度（即单格宽度）
+   * tablePosition 表示：
+   * - marginLeft: chart grid 左侧区域宽度（grid rect.x），用于对齐统计类型标签列
+   * - width: 网格总宽度除以总列数，即单格宽度，确保数据列总宽度始终与 grid 宽度一致
    */
   const setTablePosition = () => {
     const instance = chart.value
     if (!instance) return
 
     const rect = getGridRect(instance)
+    const total = _categoryCount?.value || 0
+
+    if (rect && total > 0) {
+      tablePosition.marginLeft = rect.x
+      tablePosition.width = rect.width / total
+      return
+    }
+
+    // fallback: 当无法获取 grid rect 或 total 时，使用 convertToPixel 估算
     const opt = instance.getOption() as { xAxis?: Array<{ data?: unknown[] }> }
     const range = getVisibleRange(instance, opt.xAxis?.[0]?.data?.length || 0)
     if (!range) {
