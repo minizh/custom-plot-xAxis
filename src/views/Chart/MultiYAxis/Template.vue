@@ -221,6 +221,112 @@ const legendColors = [
   '#9a60b4'
 ]
 
+// ========== 颜色生成算法 ==========
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      }
+    : { r: 0, g: 0, b: 0 }
+}
+
+const rgbToHex = (r, g, b) => {
+  return (
+    '#' +
+    [r, g, b]
+      .map((x) => {
+        const hex = Math.round(x).toString(16)
+        return hex.length === 1 ? '0' + hex : hex
+      })
+      .join('')
+  )
+}
+
+const rgbToHsl = (r, g, b) => {
+  r /= 255
+  g /= 255
+  b /= 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  let h, s
+  const l = (max + min) / 2
+
+  if (max === min) {
+    h = s = 0
+  } else {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0)
+        break
+      case g:
+        h = (b - r) / d + 2
+        break
+      case b:
+        h = (r - g) / d + 4
+        break
+    }
+    h /= 6
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 }
+}
+
+const hslToRgb = (h, s, l) => {
+  h /= 360
+  s /= 100
+  l /= 100
+  let r, g, b
+  if (s === 0) {
+    r = g = b = l
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1
+      if (t > 1) t -= 1
+      if (t < 1 / 6) return p + (q - p) * 6 * t
+      if (t < 1 / 2) return q
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
+      return p
+    }
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+    const p = 2 * l - q
+    r = hue2rgb(p, q, h + 1 / 3)
+    g = hue2rgb(p, q, h)
+    b = hue2rgb(p, q, h - 1 / 3)
+  }
+  return { r: r * 255, g: g * 255, b: b * 255 }
+}
+
+/**
+ * 以基准色谱生成足够数量的颜色
+ * 超出基准色数量的部分，按色谱从左到右依次生成深浅交替的变体
+ */
+const generateColors = (count) => {
+  if (count <= legendColors.length) return legendColors.slice(0, count)
+  const result = [...legendColors]
+  let round = 1
+  while (result.length < count) {
+    for (let i = 0; i < legendColors.length && result.length < count; i++) {
+      const rgb = hexToRgb(legendColors[i])
+      const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b)
+      const delta = round * 12
+      if (round % 2 === 1) {
+        hsl.l = Math.max(10, hsl.l - delta)
+      } else {
+        hsl.l = Math.min(90, hsl.l + delta)
+      }
+      const newRgb = hslToRgb(hsl.h, hsl.s, hsl.l)
+      result.push(rgbToHex(newRgb.r, newRgb.g, newRgb.b))
+    }
+    round++
+  }
+  return result
+}
+// =================================
+
 const addStatConfig = () => {
   statConfigs.value.push({
     statFunc: 'sum',
@@ -295,7 +401,7 @@ const colorByGroupMap = computed(() => {
   rawValues.value.forEach((item) => {
     const key = getColorByKey(item)
     if (!map.has(key)) {
-      map.set(key, map.size % legendColors.length)
+      map.set(key, map.size)
     }
   })
   return map
@@ -307,10 +413,11 @@ const colorByGroupMap = computed(() => {
 const computedCellBgColors = computed(() => {
   if (!colorByGroupMap.value || !rawValues.value.length) return undefined
   const map = colorByGroupMap.value
+  const resolvedColors = generateColors(map.size)
   return rawValues.value.map((item) => {
     const key = getColorByKey(item)
     const colorIndex = map.get(key) ?? 0
-    return legendColors[colorIndex]
+    return resolvedColors[colorIndex]
   })
 })
 
@@ -319,9 +426,11 @@ const computedCellBgColors = computed(() => {
  */
 const computedColorByGroups = computed(() => {
   if (!colorByGroupMap.value) return []
+  const map = colorByGroupMap.value
+  const resolvedColors = generateColors(map.size)
   const groups = []
-  colorByGroupMap.value.forEach((colorIndex, key) => {
-    groups.push({ name: key, color: legendColors[colorIndex] })
+  map.forEach((colorIndex, key) => {
+    groups.push({ name: key, color: resolvedColors[colorIndex] })
   })
   return groups
 })
@@ -351,6 +460,8 @@ const computedYAxisList = computed(() => {
   const labels = yAxisLabels.value
   if (!baseValues.length || !headers.length || !labels.length) return []
 
+  const resolvedColors = generateColors(labels.length)
+
   return labels.map((label, idx) => {
     const values = baseValues.map((item) => {
       const obj = { name: item.name }
@@ -369,7 +480,7 @@ const computedYAxisList = computed(() => {
     const bgColor =
       bgColorMode.value === 'gray'
         ? '#f5f5f5'
-        : legendColors[idx % legendColors.length]
+        : resolvedColors[idx]
 
     return {
       name: label,
@@ -380,6 +491,16 @@ const computedYAxisList = computed(() => {
     }
   })
 })
+
+const generateBoxData = (center) => {
+  const spread = Math.floor(Math.random() * 15) + 5
+  const min = Math.max(0, center - spread * 2)
+  const max = center + spread * 2
+  const q1 = Math.floor(min + (center - min) * 0.25)
+  const median = center
+  const q3 = Math.floor(center + (max - center) * 0.25)
+  return { min, q1, median, q3, max }
+}
 
 /**
  * 生成演示数据：15 条测试数据，附带各类统计字段
@@ -394,10 +515,10 @@ const generateData = () => {
   const testPrograms = ['TP1', 'TP2']
 
   for (let i = 1; i <= 15; i++) {
-    cats.push(`测试数据${i}`)
-    vals.push({
+    const baseValue = Math.floor(Math.random() * 100) + 20
+    const item = {
       name: `测试数据${i}`,
-      value: Math.floor(Math.random() * 100) + 20,
+      value: baseValue,
       productId: productIds[Math.floor(Math.random() * productIds.length)],
       lotId: lotIds[Math.floor(Math.random() * lotIds.length)],
       waferId: waferIds[Math.floor(Math.random() * waferIds.length)],
@@ -411,35 +532,53 @@ const generateData = () => {
       count: Math.floor(Math.random() * 100),
       uniqueCount: Math.floor(Math.random() * 50),
       avg: Math.floor(Math.random() * 100)
-    })
+    }
+    for (let j = 0; j < 10; j++) {
+      const center = Math.floor(baseValue * (1 + j * 0.3)) + j * 10
+      const bd = generateBoxData(center)
+      item[`box_${j}_min`] = bd.min
+      item[`box_${j}_q1`] = bd.q1
+      item[`box_${j}_median`] = bd.median
+      item[`box_${j}_q3`] = bd.q3
+      item[`box_${j}_max`] = bd.max
+    }
+    cats.push(`测试数据${i}`)
+    vals.push(item)
   }
   categories.value = cats
   rawValues.value = vals
 }
 
 /**
- * 构建 ECharts option：包含多个 Y 轴和对应的折线系列
- * Color By 模式下，折线数据点颜色与表格背景色保持一致，图例显示 Color By 分组
+ * 构建 ECharts option：包含多个 Y 轴和对应的 boxplot 系列
+ * 使用 dataset 模式（对象数组）组织数据
  */
+const getBoxEncode = (idx) => {
+  return [
+    `box_${idx}_min`,
+    `box_${idx}_q1`,
+    `box_${idx}_median`,
+    `box_${idx}_q3`,
+    `box_${idx}_max`
+  ]
+}
+
 const getOption = () => {
   const labels = yAxisLabels.value
 
-  // Color By 模式且使用 Legend Color：单 Y 轴 + 数据点按 Color By 着色 + 分组图例
+  // Color By 模式且使用 Legend Color：单 Y 轴 + 箱体按 Color By 着色 + 分组图例
   if (isColorByMode.value && bgColorMode.value === 'legend') {
     const colorByGroups = computedColorByGroups.value
-    const mainData = rawValues.value.map((item, idx) => ({
-      value: Math.floor(item.value * (1 + 0 * 0.3)) + 0 * 10,
-      itemStyle: { color: computedCellBgColors.value[idx] || legendColors[0] }
-    }))
-
     const series = [
       {
         name: labels[0],
-        type: 'line',
-        yAxisIndex: 0,
-        data: mainData,
-        lineStyle: { color: '#999' },
-        symbolSize: 6
+        type: 'boxplot',
+        datasetIndex: 0,
+        encode: { x: 'name', y: getBoxEncode(0) },
+        itemStyle: {
+          color: (params) =>
+            computedCellBgColors.value?.[params.dataIndex] || '#5470c6'
+        }
       },
       ...colorByGroups.map((g) => ({
         name: g.name,
@@ -456,10 +595,10 @@ const getOption = () => {
         axisPointer: { type: 'cross' }
       },
       legend: { data: colorByGroups.map((g) => g.name), top: 30 },
+      dataset: { source: rawValues.value },
       grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
       xAxis: {
         type: 'category',
-        data: categories.value,
         axisLabel: { show: false },
         axisTick: { show: false },
         axisLine: { show: false }
@@ -491,25 +630,25 @@ const getOption = () => {
   }
 
   // 默认多 Y 轴模式
+  const resolvedColors = generateColors(labels.length)
   const yAxis = labels.map((label, idx) => ({
     type: 'value',
     name: label,
     position: idx % 2 === 0 ? 'left' : 'right',
     axisLine: {
       show: true,
-      lineStyle: { color: legendColors[idx % legendColors.length] }
+      lineStyle: { color: resolvedColors[idx] }
     },
-    axisLabel: { color: legendColors[idx % legendColors.length] }
+    axisLabel: { color: resolvedColors[idx] }
   }))
 
   const series = labels.map((label, idx) => ({
     name: label,
-    type: 'line',
+    type: 'boxplot',
+    datasetIndex: 0,
     yAxisIndex: idx,
-    data: rawValues.value.map((item) =>
-      Math.floor(item.value * (1 + idx * 0.3)) + idx * 10
-    ),
-    itemStyle: { color: legendColors[idx % legendColors.length] }
+    encode: { x: 'name', y: getBoxEncode(idx) },
+    itemStyle: { color: resolvedColors[idx] }
   }))
 
   return {
@@ -519,10 +658,10 @@ const getOption = () => {
       axisPointer: { type: 'cross' }
     },
     legend: { data: labels, top: 30 },
+    dataset: { source: rawValues.value },
     grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
     xAxis: {
       type: 'category',
-      data: categories.value,
       axisLabel: { show: false },
       axisTick: { show: false },
       axisLine: { show: false }
