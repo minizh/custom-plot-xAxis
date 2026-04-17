@@ -126,15 +126,13 @@ const generateData = () => {
       sum: Math.floor(Math.random() * 1000), count: Math.floor(Math.random() * 100),
       uniqueCount: Math.floor(Math.random() * 50), avg: Math.floor(Math.random() * 100)
     }
+    const values: [string, number, number, number, number, number][] = []
     for (let j = 0; j < 10; j++) {
       const center = Math.floor(baseValue * (1 + j * 0.3)) + j * 10
       const bd = generateBoxData(center)
-      item[`box_${j}_min`] = bd.min
-      item[`box_${j}_q1`] = bd.q1
-      item[`box_${j}_median`] = bd.median
-      item[`box_${j}_q3`] = bd.q3
-      item[`box_${j}_max`] = bd.max
+      values.push([`测试数据${i}`, bd.min, bd.q1, bd.median, bd.q3, bd.max])
     }
+    item.values = values
     cats.push(`测试数据${i}`)
     vals.push(item)
   }

@@ -167,16 +167,16 @@ export function useMultiYAxisChart(options: MultiYAxisChartOptions) {
   })
 
   /**
-   * 获取第 idx 个 Y 轴对应的箱线图 encode 字段数组
+   * 获取第 idx 个 Y 轴对应的箱线图 dataset source 数据
    */
-  const getBoxEncode = (idx: number): [string, string, string, string, string] => {
-    return [
-      `box_${idx}_min`,
-      `box_${idx}_q1`,
-      `box_${idx}_median`,
-      `box_${idx}_q3`,
-      `box_${idx}_max`
-    ]
+  const getBoxDatasetSource = (idx: number): [string | number, number, number, number, number, number][] => {
+    return rawValues.value.map((item) => {
+      const values = item.values as
+        | [string | number, number, number, number, number, number][]
+        | undefined
+      const boxData = values?.[idx]
+      return boxData ?? [String(item.name), 0, 0, 0, 0, 0]
+    })
   }
 
   /**
@@ -188,6 +188,11 @@ export function useMultiYAxisChart(options: MultiYAxisChartOptions) {
   const getOption = (): EChartsOption => {
     const labels = yAxisLabels.value
 
+    // 构建每个 Y 轴对应的箱线图 dataset
+    const boxDatasets = labels.map((_, idx) => ({
+      source: getBoxDatasetSource(idx)
+    }))
+
     // 模式一：Color By 模式且使用 Legend Color
     if (isColorByMode.value && bgColorMode.value === 'legend') {
       const colorByGroups = computedColorByGroups.value
@@ -195,8 +200,9 @@ export function useMultiYAxisChart(options: MultiYAxisChartOptions) {
         {
           name: labels[0],
           type: 'boxplot' as const,
+          yAxisIndex: 0,
           datasetIndex: 0,
-          encode: { x: 'name', y: getBoxEncode(0) },
+          encode: { x: 0, y: [1, 2, 3, 4, 5] },
           itemStyle: {
             color: (params: { dataIndex: number }) =>
               computedCellBgColors.value?.[params.dataIndex] || '#5470c6'
@@ -214,7 +220,7 @@ export function useMultiYAxisChart(options: MultiYAxisChartOptions) {
         title: { text: '多Y轴 + 统计值表示例', left: 'center' },
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
         legend: { data: colorByGroups.map((g) => g.name), top: 30 },
-        dataset: { source: rawValues.value },
+        dataset: boxDatasets.slice(0, 1),
         grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
         xAxis: {
           type: 'category',
@@ -258,9 +264,9 @@ export function useMultiYAxisChart(options: MultiYAxisChartOptions) {
     const series = labels.map((label, idx) => ({
       name: label,
       type: 'boxplot' as const,
-      datasetIndex: 0,
       yAxisIndex: idx,
-      encode: { x: 'name', y: getBoxEncode(idx) },
+      datasetIndex: idx,
+      encode: { x: 0, y: [1, 2, 3, 4, 5] } as any,
       itemStyle: { color: resolvedColors[idx] }
     }))
 
@@ -268,7 +274,7 @@ export function useMultiYAxisChart(options: MultiYAxisChartOptions) {
       title: { text: '多Y轴 + 统计值表示例', left: 'center' },
       tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
       legend: { data: labels, top: 30 },
-      dataset: { source: rawValues.value },
+      dataset: boxDatasets,
       grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
       xAxis: {
         type: 'category',
@@ -299,6 +305,6 @@ export function useMultiYAxisChart(options: MultiYAxisChartOptions) {
     computedColorByGroups,
     isColorByMode,
     getOption,
-    getBoxEncode
+    getBoxDatasetSource
   }
 }
