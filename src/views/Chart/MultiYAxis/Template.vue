@@ -70,9 +70,9 @@ const bgColorMode = ref<'gray' | 'legend'>('gray')
 
 const statFuncOptions = ['svg', 'StdDev', 'min', 'max', 'sum', 'avg', 'count', 'uniqueCount']
 const statConfigs = ref<StatConfig[]>([
-  { statFunc: 'sum', orientation: 'horizontal', customAngle: 45, format: undefined },
-  { statFunc: 'avg', orientation: 'horizontal', customAngle: 45, format: undefined },
-  { statFunc: 'max', orientation: 'horizontal', customAngle: 45, format: undefined },
+  { statFunc: 'sum', orientation: 'vertical', customAngle: 0, format: undefined },
+  { statFunc: 'avg', orientation: 'horizontal', customAngle: 45, format: 4 },
+  { statFunc: 'max', orientation: 'tilted', customAngle: 45, format: 3 },
   { statFunc: 'min', orientation: 'horizontal', customAngle: 45, format: undefined }
 ])
 const yAxisLabels = ref<string[]>(['数值', '比率'])
