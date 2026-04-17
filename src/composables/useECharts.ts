@@ -11,7 +11,14 @@ export function useECharts(
   optionFactory?: () => EChartsOption
 ) {
   // 使用 shallowRef 存储 ECharts 实例，避免深层响应式带来的性能开销
-  const chartInstance = shallowRef<ECharts>()
+  const chartInstance = shallowRef<ECharts | undefined>()
+
+  /**
+   * 窗口 resize 时调用图表 resize
+   */
+  const handleResize = () => {
+    chartInstance.value?.resize()
+  }
 
   /**
    * 初始化 ECharts 实例
@@ -24,13 +31,6 @@ export function useECharts(
     }
     // 监听窗口尺寸变化，自动 resize
     window.addEventListener('resize', handleResize)
-  }
-
-  /**
-   * 窗口 resize 时调用图表 resize
-   */
-  const handleResize = () => {
-    chartInstance.value?.resize()
   }
 
   /**

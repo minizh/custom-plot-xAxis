@@ -76,6 +76,7 @@ import {
 } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import type { Component } from 'vue'
 
 const route = useRoute()
 // 从 Composable 获取菜单所需的状态和方法
@@ -88,7 +89,7 @@ const {
 } = useMenuRoutes()
 
 // 图标映射表：路由 meta.icon -> Element Plus 图标组件
-const iconMap: Record<string, unknown> = {
+const iconMap: Record<string, Component> = {
   House,
   Document,
   Brush,

@@ -5,6 +5,14 @@ import type {
 } from '@/types/echarts'
 import type { ECharts } from 'echarts'
 
+/**
+ * 对列表按指定字段排序后分组计数
+ * @param list - 待分组的数据列表
+ * @param sortBy - 排序字段
+ * @param groupKey - 分组字段
+ * @param isSorted - 是否已排序（若未排序则自动排序）
+ * @returns 分组结果数组
+ */
 export const sortAndGroupCount = (
   list: unknown,
   sortBy: string,
@@ -40,6 +48,12 @@ export const sortAndGroupCount = (
   return result
 }
 
+/**
+ * 将百分比字符串或像素值转换为像素数值
+ * @param val - 原始值（如 '20%'、'20px'、20）
+ * @param base - 百分比计算时的基准值
+ * @returns 像素数值
+ */
 export const parsePercentToPx = (
   val: string | number | null | undefined,
   base: number
@@ -53,6 +67,13 @@ export const parsePercentToPx = (
   return Number.isFinite(n) ? n : 0
 }
 
+/**
+ * 获取 ECharts grid 组件某一边距的像素值
+ * @param chart - ECharts 实例
+ * @param gridIndex - grid 索引
+ * @param position - 边距属性名（如 'left'、'right'、'top'、'bottom'）
+ * @returns 像素数值
+ */
 export const getConfiguredGridPx = (
   chart: ECharts,
   gridIndex: number,
@@ -67,6 +88,12 @@ export const getConfiguredGridPx = (
   return parsePercentToPx(positionValue, base)
 }
 
+/**
+ * 获取 X 轴当前可见范围的 DOM 像素位置
+ * @param chart - ECharts 实例
+ * @param xAxisIndex - X 轴索引
+ * @returns 可见范围的 left 和 width
+ */
 export function getXAxisVisibleDomRange(
   chart: ECharts,
   xAxisIndex = 0
@@ -92,6 +119,12 @@ export function getXAxisVisibleDomRange(
   }
 }
 
+/**
+ * 通过临时 DOM 元素测量文本的像素宽度
+ * @param text - 待测量文本
+ * @param fontSize - 字体大小
+ * @returns 文本像素宽度
+ */
 export const measureByDOM = (text: string, fontSize: number): number => {
   const span = document.createElement('span')
   span.style.visibility = 'hidden'
@@ -105,6 +138,12 @@ export const measureByDOM = (text: string, fontSize: number): number => {
   return width
 }
 
+/**
+ * 计算在最多显示 max 个标签时的最佳均匀采样索引序列
+ * @param N - 总标签数
+ * @param max - 最大可显示数量
+ * @returns 应显示的索引数组
+ */
 export const calculateLabelDisplay = (N: number, max: number): number[] => {
   if (N <= 0) return []
   if (N === 1) return [0]
@@ -139,6 +178,16 @@ export const calculateLabelDisplay = (N: number, max: number): number[] => {
   return bestSeq.length > 0 ? bestSeq : [0]
 }
 
+/**
+ * 根据文本内容、布局方式和容器宽度动态计算单元格样式
+ * @param text - 单元格文本
+ * @param width - 单元格宽度
+ * @param layout - 文本布局方式
+ * @param tiltAngle - 倾斜角度
+ * @param fontSize - 字体大小
+ * @param forcedHeight - 强制指定的高度（可选）
+ * @returns 包含 width、minHeight、height、padding 的对象
+ */
 export const getDynamicCellStyle = (
   text: string,
   width: number,

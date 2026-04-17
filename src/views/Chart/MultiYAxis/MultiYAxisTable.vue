@@ -146,7 +146,7 @@ import { useDataZoomState } from '@/composables/useChartCommon'
 import { useTableAxis } from '@/composables/useTableAxis'
 import type { ChartDataItem, HeaderLayout, TableHeader } from '@/types/echarts'
 import type { ECharts } from 'echarts'
-import { computed, ref, toRef, watch } from 'vue'
+import { computed, toRef, watch } from 'vue'
 import { getDynamicCellStyle } from '@/utils/chart-util'
 
 export interface YAxisTableItem {
@@ -191,28 +191,34 @@ const { dataZoomState } = useDataZoomState(chartRef)
 
 const totalCount = computed(() => props.categories?.length || 0)
 
+const getSliceRange = () => {
+  if (!dataZoomState.value || !chartRef.value) return { start: 0, end: totalCount.value - 1 }
+  const total = totalCount.value
+  const start = Math.max(0, Math.round((dataZoomState.value.start / 100) * (total - 1)))
+  const end = Math.min(total - 1, Math.round((dataZoomState.value.end / 100) * (total - 1)))
+  return { start, end }
+}
+
 /**
  * 根据 dataZoom 状态截取可见的 categories
  */
 const visibleCategories = computed(() => {
-  const cats = props.categories || []
-  if (!dataZoomState.value || !chartRef.value) return cats
-  const total = cats.length
-  const startIndex = Math.max(0, Math.round((dataZoomState.value.start / 100) * (total - 1)))
-  const endIndex = Math.min(total - 1, Math.round((dataZoomState.value.end / 100) * (total - 1)))
-  return cats.slice(startIndex, endIndex + 1)
+  const { start, end } = getSliceRange()
+  return (props.categories || []).slice(start, end + 1)
 })
 
 /**
  * 根据 dataZoom 状态截取指定 values 数组的可见部分
  */
 const getVisibleValues = (values: ChartDataItem[]) => {
-  if (!dataZoomState.value || !chartRef.value) return values
-  const total = values.length
-  const startIndex = Math.max(0, Math.round((dataZoomState.value.start / 100) * (total - 1)))
-  const endIndex = Math.min(total - 1, Math.round((dataZoomState.value.end / 100) * (total - 1)))
-  return values.slice(startIndex, endIndex + 1)
+  const { start, end } = getSliceRange()
+  return values.slice(start, end + 1)
 }
+
+/**
+ * 可见区域的 starting index（用于映射 cellBgColors）
+ */
+const visibleStartIndex = computed(() => getSliceRange().start)
 
 /**
  * 计算当前可见数据中，单元格内容的最大文本长度
@@ -230,16 +236,6 @@ const maxCellTextLength = computed(() => {
     })
   })
   return max
-})
-
-/**
- * 可见区域的 starting index（用于映射 cellBgColors）
- */
-const visibleStartIndex = computed(() => {
-  const cats = props.categories || []
-  if (!dataZoomState.value || !chartRef.value) return 0
-  const total = cats.length
-  return Math.max(0, Math.round((dataZoomState.value.start / 100) * (total - 1)))
 })
 
 /**

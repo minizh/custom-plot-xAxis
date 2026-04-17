@@ -1,4 +1,9 @@
 <template>
+  <!--
+    文本渲染容器组件
+    支持三种布局方式：水平(horizontal)、垂直(vertical)、倾斜(tilted)
+    根据布局方式自动计算容器尺寸和文本旋转样式
+  -->
   <div
     class="text-div-container"
     :class="`layout-${layout}`"
@@ -15,12 +20,19 @@ import { computed } from 'vue'
 
 const props = withDefaults(
   defineProps<{
+    /** 显示的文本内容 */
     text: string
+    /** 容器宽度（像素） */
     width: number
+    /** 容器高度（像素） */
     height: number
+    /** 文本布局方式 */
     layout: 'horizontal' | 'vertical' | 'tilted'
+    /** 字体大小（像素） */
     fontSize: number
+    /** 倾斜角度（仅在 tilted 布局时有效） */
     tiltAngle?: number
+    /** 是否对溢出文本截断显示省略号 */
     truncate?: boolean
   }>(),
   {
@@ -30,9 +42,11 @@ const props = withDefaults(
   }
 )
 
-// vertical: container width becomes content required height
-// tilted: container height needs to accommodate tilted text
-
+/**
+ * 计算容器的外层样式（宽度、高度、字体大小）
+ * vertical 布局时：容器高度等于文本所需宽度
+ * tilted 布局时：容器高度需要容纳倾斜后的文本
+ */
 const containerStyle = computed(() => {
   if (props.layout === 'vertical') {
     const charWidth = props.fontSize * 0.55
@@ -65,6 +79,9 @@ const containerStyle = computed(() => {
   }
 })
 
+/**
+ * 计算文本内容的内联样式（旋转、对齐、截断等）
+ */
 const getTextStyle = () => {
   if (props.layout === 'vertical') {
     const base: Record<string, string> = {

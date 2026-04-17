@@ -1,5 +1,6 @@
 <template>
   <div class="chart-container">
+    <!-- 左侧配置面板：控制 GroupXAxis 与 TableXAxis 的文本旋转参数 -->
     <div class="config-panel">
       <h3>文本旋转配置</h3>
       <div class="config-section">
@@ -98,9 +99,13 @@
         </div>
       </div>
     </div>
+
+    <!-- 右侧图表区 -->
     <div class="chart-wrapper">
       <div ref="chartRef" class="chart"></div>
     </div>
+
+    <!-- 底部自定义 X 轴容器 -->
     <div class="x-axis-container">
       <GroupXAxis
         :chart="chartInstance"
@@ -124,23 +129,26 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useECharts } from '@/composables/useECharts'
 import { useChartDemo } from '@/composables/useChartDemo'
 import { reactive, ref, watch } from 'vue'
 import GroupXAxis from '../GroupXAxis/GroupXAxis.vue'
 import TableXAxis from '../TableXAxis/TableXAxis.vue'
 import './styles.css'
+import type { HeaderLayout } from '@/types/echarts'
 
-const chartRef = ref(null)
+// 图表 DOM 引用
+const chartRef = ref<HTMLElement | null>(null)
 const chartInstance = ref()
 const { chartInstance: echartInstance, setChartOption } = useECharts(chartRef)
 
-// 将 echartInstance 同步到本地 ref，供子组件使用
+// 将 echarts 实例同步到本地 ref，供子组件使用
 watch(echartInstance, (val) => {
   chartInstance.value = val
 })
 
+// 表格表头配置
 const tableHeaders = [
   { value: 'sum', label: 'sum' },
   { value: 'avg', label: 'avg' },
@@ -148,24 +156,27 @@ const tableHeaders = [
   { value: 'min', label: 'min' }
 ]
 
+// GroupXAxis 旋转配置
 const groupXAxisConfig = reactive({
-  labelLayout: 'horizontal',
+  labelLayout: 'horizontal' as 'horizontal' | 'vertical' | 'tilted',
   labelTiltAngle: 45
 })
 
+// TableXAxis 旋转与显示配置
 const tableXAxisConfig = reactive({
   autoInterval: true,
   showCategoryRow: true,
-  categoryLayout: 'horizontal',
+  categoryLayout: 'horizontal' as 'horizontal' | 'vertical' | 'tilted',
   categoryTiltAngle: 45,
   headerLayouts: {
-    sum: { layout: 'horizontal', tiltAngle: 45 },
-    avg: { layout: 'vertical', tiltAngle: 45 },
-    max: { layout: 'tilted', tiltAngle: 45 },
-    min: { layout: 'tilted', tiltAngle: 30 }
-  }
+    sum: { layout: 'horizontal' as const, tiltAngle: 45 },
+    avg: { layout: 'vertical' as const, tiltAngle: 45 },
+    max: { layout: 'tilted' as const, tiltAngle: 45 },
+    min: { layout: 'tilted' as const, tiltAngle: 30 }
+  } as Record<string, HeaderLayout>
 })
 
+// 演示用基础数据
 const testData = [
   { productId: '0001A', lotId: '0001', waferId: '0001A01' },
   { productId: '0001A', lotId: '0001', waferId: '0001A02' },
@@ -188,8 +199,8 @@ const testData = [
  * 生成演示数据：基于 testData 生成 categories 和带统计字段的 values
  */
 const generateData = () => {
-  const categories = []
-  const values = []
+  const categories: string[] = []
+  const values: Record<string, unknown>[] = []
   for (let i = 0; i < testData.length; i++) {
     categories.push(testData[i].waferId)
     values.push({
@@ -205,7 +216,7 @@ const generateData = () => {
   return { categories, values }
 }
 
-// 使用 Composable 统一处理数据生成；但 CombinedXAxis 需要自定义 option（隐藏原生 X 轴）
+// 使用 Composable 统一处理数据生成；自定义 option 隐藏原生 X 轴
 const { chartData } = useChartDemo(
   setChartOption,
   '分组X轴 + 统计值表示例',

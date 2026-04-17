@@ -6,6 +6,7 @@
         <p>请输入您的账号和密码</p>
       </div>
 
+      <!-- 登录表单 -->
       <el-form
         ref="loginFormRef"
         :model="loginForm"
@@ -52,14 +53,14 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, type FormInstance } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const loginFormRef = ref(null)
+const loginFormRef = ref<FormInstance | null>(null)
 const loading = ref(false)
 
 // 登录表单数据
@@ -83,7 +84,7 @@ const loginRules = {
 const handleLogin = async () => {
   if (!loginFormRef.value) return
 
-  await loginFormRef.value.validate((valid) => {
+  await loginFormRef.value.validate((valid: boolean) => {
     if (valid) {
       loading.value = true
 

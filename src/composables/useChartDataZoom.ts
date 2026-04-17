@@ -3,11 +3,6 @@ import type { ECharts } from 'echarts'
 import { ref, watch, type Ref } from 'vue'
 import { getDataZoomState } from '@/composables/useChartCommon'
 
-export interface DataZoomState {
-  start: number
-  end: number
-}
-
 /**
  * Composable: 根据 ECharts 的 dataZoom 状态，计算当前可见的数据切片
  * 支持两类数据格式：带 categories/values 的 TableChartData 和普通的 ChartDataItem[]
@@ -45,28 +40,19 @@ export function useChartDataZoom<T extends TableChartData | ChartDataItem[]>(
       return
     }
 
+    const total = hasCategories(data) ? data.categories.length : (data as ChartDataItem[]).length
+    const startIndex = Math.max(0, Math.round((dz.start / 100) * (total - 1)))
+    const endIndex = Math.min(total - 1, Math.round((dz.end / 100) * (total - 1)))
+
     if (hasCategories(data)) {
       // TableChartData：同步截取 categories 和 values
-      const total = data.categories.length
-      const startIndex = Math.max(0, Math.round((dz.start / 100) * (total - 1)))
-      const endIndex = Math.min(
-        total - 1,
-        Math.round((dz.end / 100) * (total - 1))
-      )
       visibleData.value = {
         categories: data.categories.slice(startIndex, endIndex + 1),
         values: data.values.slice(startIndex, endIndex + 1)
       } as T
     } else {
       // 普通数组：直接 slice
-      const arr = data as ChartDataItem[]
-      const total = arr.length
-      const startIndex = Math.max(0, Math.round((dz.start / 100) * (total - 1)))
-      const endIndex = Math.min(
-        total - 1,
-        Math.round((dz.end / 100) * (total - 1))
-      )
-      visibleData.value = arr.slice(startIndex, endIndex + 1) as T
+      visibleData.value = (data as ChartDataItem[]).slice(startIndex, endIndex + 1) as T
     }
   }
 

@@ -17,7 +17,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // Home 页面：暂无额外逻辑，仅作为项目入口展示
 </script>
 
@@ -41,49 +41,7 @@
   line-height: 1.6;
 }
 
-.content h3 {
-  color: #303133;
-  margin-top: 20px;
-  margin-bottom: 10px;
-}
-
-.content ul {
-  margin: 15px 0;
-  padding-left: 20px;
-}
-
-.content li {
-  margin: 8px 0;
-  color: #606266;
-}
-
 .examples-card {
   margin-top: 20px;
-}
-
-.examples-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-.example-item {
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.example-item:hover {
-  transform: translateY(-2px);
-}
-
-.example-content h4 {
-  margin: 0 0 8px 0;
-  color: #409eff;
-}
-
-.example-content p {
-  margin: 0;
-  color: #606266;
-  font-size: 14px;
 }
 </style>

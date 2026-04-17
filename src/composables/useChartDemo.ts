@@ -51,7 +51,7 @@ export function createLineChartOption(
       {
         name: '数值',
         type: 'line',
-        data: data.values.map((item) => (item as any).value),
+        data: data.values.map((item) => (item as Record<string, unknown>).value as number),
         itemStyle: { color: '#409eff' }
       }
     ],

@@ -1,138 +1,71 @@
 import { useAutoInterval } from '@/composables/useAutoInterval'
 import { useChartPosition } from '@/composables/useChartPosition'
 import { useResizeObserver } from '@/composables/useResizeObserver'
+import { useHeaderLayout } from '@/composables/useHeaderLayout'
 import type { ChartDataItem, HeaderLayout, TableHeader } from '@/types/echarts'
 import type { ECharts } from 'echarts'
-import { computed, ref, toRef, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import { getDynamicCellStyle } from '@/utils/chart-util'
 import { hideChartXAxis } from '@/composables/useChartCommon'
 
-/**
- * Y轴表格项（用于 MultiYAxisTable）
- */
-export interface YAxisTableItem {
-  name: string
-  headers: TableHeader[]
-  values: ChartDataItem[]
-  bgColor?: string
-}
-
-/**
- * useTableAxis 配置选项
- */
 export interface TableAxisOptions {
-  /** 图表实例 */
   chart: Ref<ECharts | undefined>
-  /** 可见的类别数组 */
   categories: Ref<string[]>
-  /** 表头配置 */
   headers: Ref<TableHeader[]>
-  /** 全局标签布局 */
   labelLayout?: Ref<'horizontal' | 'vertical' | 'tilted'>
-  /** 全局标签倾斜角度 */
   labelTiltAngle?: Ref<number>
-  /** 类别行布局 */
   categoryLayout?: Ref<'horizontal' | 'vertical' | 'tilted'>
-  /** 类别行倾斜角度 */
   categoryTiltAngle?: Ref<number>
-  /** 各表头的独立布局配置 */
   headerLayouts?: Ref<Record<string, HeaderLayout>>
-  /** 是否开启自动间隔 */
   autoInterval?: Ref<boolean>
-  /** 单元格内容的最大文本长度（用于 autoInterval 计算列宽） */
   maxCellTextLength?: Ref<number>
 }
 
 /**
- * 提取 TableXAxis / MultiYAxisTable 中通用的复杂逻辑到 Composable
- * 包括：自适应列宽、窄屏模式、行高计算、单元格合并分组等
+ * Composable: 封装表格轴（TableXAxis / MultiYAxisTable）的复杂布局计算逻辑
+ * 包括：图表网格位置同步、窄屏模式判定、自动间隔列宽计算、单元格合并分组、行高计算等
  */
 export function useTableAxis(options: TableAxisOptions) {
   const chartRef = options.chart
   const categoriesRef = options.categories
   const headersRef = options.headers
-  const labelLayout = options.labelLayout ?? ref('horizontal')
-  const labelTiltAngle = options.labelTiltAngle ?? ref(45)
-  const categoryLayout = options.categoryLayout ?? ref('horizontal')
-  const categoryTiltAngle = options.categoryTiltAngle ?? ref(45)
-  const headerLayouts = options.headerLayouts ?? ref<Record<string, HeaderLayout>>({})
   const autoInterval = options.autoInterval ?? ref(true)
 
-  const textDivStyle = computed(() => ({ fontSize: 12 }))
+  // 固定字体大小为 12px，用于单元格高度估算
+  const textDivStyle = { fontSize: 12 }
 
-  // 使用 useChartPosition 同步图表网格位置
+  // 同步 ECharts 图表的网格位置，用于对齐左侧标签列和计算单列宽度
   const { tablePosition } = useChartPosition(
     chartRef,
     computed(() => categoriesRef.value.length || 0)
   )
 
-  /**
-   * 获取指定表头的布局方式，优先使用独立配置，否则回退到全局配置
-   */
-  const getHeaderLayout = (headerValue: string): 'horizontal' | 'vertical' | 'tilted' => {
-    return headerLayouts.value[headerValue]?.layout || labelLayout.value
-  }
+  // 表头布局相关计算（独立配置 / 全局配置 / 类别行有效布局推断）
+  const {
+    getHeaderLayout,
+    getHeaderTiltAngle,
+    effectiveCategoryLayout,
+    effectiveTiltAngle
+  } = useHeaderLayout(options)
 
-  /**
-   * 获取指定表头的倾斜角度
-   */
-  const getHeaderTiltAngle = (headerValue: string): number => {
-    return headerLayouts.value[headerValue]?.tiltAngle ?? labelTiltAngle.value
-  }
-
-  /**
-   * 根据所有表头的布局推断类别行的有效布局
-   * 优先级：tilted > vertical > 全局 categoryLayout
-   */
-  const effectiveCategoryLayout = computed((): 'horizontal' | 'vertical' | 'tilted' => {
-    let hasTilted = false
-    let hasVertical = false
-    headersRef.value?.forEach((header) => {
-      const layout = getHeaderLayout(header.value)
-      if (layout === 'tilted') hasTilted = true
-      if (layout === 'vertical') hasVertical = true
-    })
-    if (hasTilted) return 'tilted'
-    if (hasVertical) return 'vertical'
-    return categoryLayout.value
-  })
-
-  /**
-   * 根据所有表头的倾斜角度推断类别行的有效倾斜角度（取最大）
-   */
-  const effectiveTiltAngle = computed(() => {
-    let maxAngle = categoryTiltAngle.value
-    headersRef.value?.forEach((header) => {
-      const layout = getHeaderLayout(header.value)
-      if (layout === 'tilted') {
-        const angle = getHeaderTiltAngle(header.value)
-        if (angle > maxAngle) maxAngle = angle
-      }
-    })
-    return maxAngle
-  })
-
-  /**
-   * 当前可见类别中的最大文本长度（用于计算列宽）
-   */
-  const maxTextLength = computed(() => {
-    return categoriesRef.value.reduce(
-      (max, cat) => Math.max(max, String(cat).length),
-      0
-    )
-  })
-
-  /**
-   * 窄屏模式：当图表容器宽度小于 600px 时开启
-   */
+  // 窄屏模式：图表容器宽度 < 600px 时开启
   const isNarrowMode = ref(false)
   const updateNarrowMode = () => {
     const w = chartRef.value?.getDom()?.clientWidth || 0
     isNarrowMode.value = w > 0 && w < 600
   }
 
+  // 当前可见类别中的最大文本长度
+  const maxTextLength = computed(() =>
+    categoriesRef.value.reduce((max, cat) => Math.max(max, String(cat).length), 0)
+  )
+
+  // 单元格内容的最大文本长度
+  const maxCell = computed(() => options.maxCellTextLength?.value || 0)
+
   /**
-   * 普通模式下的自动间隔配置
+   * 普通自动间隔配置：用于类别行和非窄屏模式下的数据行
+   * 根据 effectiveCategoryLayout 动态计算列宽
    */
   const autoIntervalOptions = computed(() => ({
     enabled: autoInterval.value,
@@ -140,19 +73,17 @@ export function useTableAxis(options: TableAxisOptions) {
     marginLeft: tablePosition.marginLeft,
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
-    maxCellTextLength: options.maxCellTextLength?.value || 0,
+    maxCellTextLength: maxCell.value,
     categoryLayout: effectiveCategoryLayout.value,
     categoryTiltAngle: effectiveTiltAngle.value,
-    fontSize: textDivStyle.value.fontSize,
+    fontSize: textDivStyle.fontSize,
     originWidth: tablePosition.width,
     narrowMode: isNarrowMode.value
   }))
 
-  const { autoColumnWidth, isColumnVisible, calculateVisibleColumns } =
-    useAutoInterval(autoIntervalOptions)
-
   /**
-   * 窄屏模式下的密集列宽配置（用于 vertical / horizontal 行）
+   * 密集自动间隔配置：窄屏模式下用于 vertical / horizontal 行
+   * 强制按 vertical 布局计算最小列宽，以显示最多列
    */
   const denseIntervalOptions = computed(() => ({
     enabled: autoInterval.value && isNarrowMode.value,
@@ -160,22 +91,17 @@ export function useTableAxis(options: TableAxisOptions) {
     marginLeft: tablePosition.marginLeft,
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
-    maxCellTextLength: options.maxCellTextLength?.value || 0,
+    maxCellTextLength: maxCell.value,
     categoryLayout: 'vertical' as const,
     categoryTiltAngle: 0,
-    fontSize: textDivStyle.value.fontSize,
+    fontSize: textDivStyle.fontSize,
     originWidth: tablePosition.width,
     narrowMode: true
   }))
 
-  const {
-    autoColumnWidth: denseColumnWidth,
-    isColumnVisible: isDenseColumnVisible,
-    calculateVisibleColumns: calculateDenseVisibleColumns
-  } = useAutoInterval(denseIntervalOptions)
-
   /**
-   * 窄屏模式下的稀疏列宽配置（用于 tilted 行，计算合并分组数）
+   * 稀疏自动间隔配置：窄屏模式下用于 tilted 行
+   * 按 tilted 布局计算列宽，实现比 dense 更疏的合并效果
    */
   const sparseIntervalOptions = computed(() => ({
     enabled: autoInterval.value && isNarrowMode.value,
@@ -183,18 +109,29 @@ export function useTableAxis(options: TableAxisOptions) {
     marginLeft: tablePosition.marginLeft,
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
-    maxCellTextLength: options.maxCellTextLength?.value || 0,
+    maxCellTextLength: maxCell.value,
     categoryLayout: 'tilted' as const,
     categoryTiltAngle: effectiveTiltAngle.value,
-    fontSize: textDivStyle.value.fontSize,
+    fontSize: textDivStyle.fontSize,
     originWidth: tablePosition.width,
     narrowMode: true
   }))
 
+  // 注册三个 useAutoInterval 实例，分别对应普通 / 密集 / 稀疏三种列宽策略
+  const { autoColumnWidth, isColumnVisible, calculateVisibleColumns } =
+    useAutoInterval(autoIntervalOptions)
+
+  const {
+    autoColumnWidth: denseColumnWidth,
+    isColumnVisible: isDenseColumnVisible,
+    calculateVisibleColumns: calculateDenseVisibleColumns
+  } = useAutoInterval(denseIntervalOptions)
+
   const { autoColumnWidth: sparseColumnWidth } = useAutoInterval(sparseIntervalOptions)
 
   /**
-   * 计算合并分组的大小：稀疏列宽 / 密集列宽
+   * 合并分组大小：在 narrowMode 下，tilted 行按此大小合并单元格
+   * 计算方式为 sparse 列宽 / dense 列宽的比值（向上取整到最近整数）
    */
   const groupSize = computed(() => {
     if (!isNarrowMode.value || denseColumnWidth.value <= 0) return 1
@@ -209,29 +146,21 @@ export function useTableAxis(options: TableAxisOptions) {
     width: number,
     layout: 'horizontal' | 'vertical' | 'tilted',
     angle: number
-  ): number => {
-    return getDynamicCellStyle(text, width, layout, angle, textDivStyle.value.fontSize)
-      .height as number
-  }
+  ): number => getDynamicCellStyle(text, width, layout, angle, textDivStyle.fontSize).height as number
 
   /**
    * 获取指定表头在窄屏模式下的合并单元格分组
-   * @param values - 当前行对应的数据数组
-   * @param header - 表头配置
+   * 基于密集模式下的可见列，按 groupSize 进行合并
    */
   const getCellGroups = (values: ChartDataItem[], header: TableHeader) => {
     const groups: { text: string; width: number }[] = []
     const size = groupSize.value
     // 只取密集模式下可见的列索引
-    const cols = categoriesRef.value
-      .map((_, idx) => idx)
-      .filter((idx) => isDenseColumnVisible(idx))
+    const cols = categoriesRef.value.map((_, i) => i).filter(isDenseColumnVisible)
     for (let i = 0; i < cols.length; i += size) {
       const chunk = cols.slice(i, i + size)
-      const firstIdx = chunk[0]
-      const text = String(values?.[firstIdx]?.[header.value] || '')
       groups.push({
-        text,
+        text: String(values?.[chunk[0]]?.[header.value] || ''),
         width: denseColumnWidth.value * chunk.length
       })
     }
@@ -240,8 +169,6 @@ export function useTableAxis(options: TableAxisOptions) {
 
   /**
    * 计算单行中某个表头的最大高度（确保整行统一高度）
-   * @param values - 当前行数据
-   * @param header - 表头配置
    */
   const getRowHeight = (values: ChartDataItem[], header: TableHeader): number => {
     const layout = getHeaderLayout(header.value)
@@ -250,10 +177,8 @@ export function useTableAxis(options: TableAxisOptions) {
 
     if (isNarrowMode.value && layout !== 'vertical' && layout !== 'horizontal') {
       // 窄屏 tilted 布局需要按合并分组计算高度
-      const groups = getCellGroups(values, header)
-      groups.forEach((g) => {
-        const h = computeCellHeight(g.text, g.width, layout, angle)
-        if (h > maxH) maxH = h
+      getCellGroups(values, header).forEach((g) => {
+        maxH = Math.max(maxH, computeCellHeight(g.text, g.width, layout, angle))
       })
     } else {
       const visibleFn = isNarrowMode.value ? isDenseColumnVisible : isColumnVisible
@@ -261,17 +186,14 @@ export function useTableAxis(options: TableAxisOptions) {
       categoriesRef.value.forEach((_, idx) => {
         if (!visibleFn(idx)) return
         const text = String(values?.[idx]?.[header.value] || '')
-        const h = computeCellHeight(text, width, layout, angle)
-        if (h > maxH) maxH = h
+        maxH = Math.max(maxH, computeCellHeight(text, width, layout, angle))
       })
     }
     return maxH
   }
 
   /**
-   * 为 headers 中每个表头计算行高（key 由外部传入，适应单表格/多 Y 轴场景）
-   * @param values - 当前行数据
-   * @param rowKey - 行高缓存 key（如 header.value 或 `${yIndex}-${header.value}`）
+   * 为 headers 中每个表头计算行高
    */
   const buildRowHeights = (
     values: ChartDataItem[],
@@ -300,19 +222,15 @@ export function useTableAxis(options: TableAxisOptions) {
   }
 
   return {
-    // 位置与布局
     tablePosition,
     textDivStyle,
-    // header 配置读取
     getHeaderLayout,
     getHeaderTiltAngle,
     effectiveCategoryLayout,
     effectiveTiltAngle,
-    // 窄屏模式
     isNarrowMode,
     updateNarrowMode,
     bindResizeObserver,
-    // 列宽
     autoColumnWidth,
     denseColumnWidth,
     sparseColumnWidth,
@@ -320,13 +238,11 @@ export function useTableAxis(options: TableAxisOptions) {
     isDenseColumnVisible,
     calculateVisibleColumns,
     calculateDenseVisibleColumns,
-    // 单元格分组与高度
     groupSize,
     getCellGroups,
     computeCellHeight,
     getRowHeight,
     buildRowHeights,
-    // 通用操作
     hideChartXAxis
   }
 }

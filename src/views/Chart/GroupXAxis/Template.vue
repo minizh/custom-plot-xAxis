@@ -1,6 +1,8 @@
 <template>
   <div class="chart-container">
+    <!-- ECharts 图表容器 -->
     <div ref="chartRef" class="chart"></div>
+    <!-- 分组 X 轴组件：覆盖在图表下方，按 waferId/lotId/productId 分组 -->
     <GroupXAxis
       :chart="chartInstance"
       :chart-data="xAxisData || []"
@@ -10,15 +12,17 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useECharts } from '@/composables/useECharts'
 import { useChartDemo } from '@/composables/useChartDemo'
 import { ref, computed } from 'vue'
 import GroupXAxis from './GroupXAxis.vue'
 
-const chartRef = ref(null)
+// 图表 DOM 引用
+const chartRef = ref<HTMLElement | null>(null)
 const { chartInstance, setChartOption } = useECharts(chartRef)
 
+// 演示用基础数据
 const testData = [
   { productId: '0001A', lotId: '0001', waferId: '0001A01' },
   { productId: '0001A', lotId: '0001', waferId: '0001A02' },
@@ -36,8 +40,8 @@ const testData = [
  * 生成演示数据：categories + 带 waferId 等附加信息的 values
  */
 const generateData = () => {
-  const categories = []
-  const values = []
+  const categories: string[] = []
+  const values: Record<string, unknown>[] = []
   for (let i = 1; i <= 10; i++) {
     categories.push(`测试数据${i}`)
     values.push({
