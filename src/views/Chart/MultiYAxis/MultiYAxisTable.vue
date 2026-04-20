@@ -1,6 +1,12 @@
 <template>
-  <div :class="[`layout-${categoryLayout}`, { 'narrow-mode': isNarrowMode }]" :style="{ position: 'relative' }">
-    <template v-for="(yAxis, yIndex) in yAxisList || []" :key="`yaxis-${yIndex}`">
+  <div
+    :class="[`layout-${categoryLayout}`, { 'narrow-mode': isNarrowCell }]"
+    :style="{ position: 'relative' }"
+  >
+    <template
+      v-for="(yAxis, yIndex) in yAxisList || []"
+      :key="`yaxis-${yIndex}`"
+    >
       <div class="table-group">
         <!-- 类别行 -->
         <div
@@ -13,7 +19,7 @@
               marginLeft: `${tablePosition.marginLeft}px`
             }"
           >
-            <template v-if="!isNarrowMode">
+            <template v-if="!isNarrowCell">
               <template
                 v-for="(item, index) in visibleCategories"
                 :key="`header-${yIndex}-${item}-${index}`"
@@ -21,13 +27,29 @@
                 <div
                   v-if="isColumnVisible(index)"
                   class="table-cell-div"
-                  :style="getDynamicCellStyle(String(item), autoColumnWidth, categoryLayout, categoryTiltAngle, textDivStyle.fontSize)"
+                  :style="
+                    getDynamicCellStyle(
+                      String(item),
+                      autoColumnWidth,
+                      categoryLayout,
+                      categoryTiltAngle,
+                      textDivStyle.fontSize
+                    )
+                  "
                 >
                   <TextDiv
                     :text="item"
                     :layout="categoryLayout"
                     :width="autoColumnWidth"
-                    :height="getDynamicCellStyle(String(item), autoColumnWidth, categoryLayout, categoryTiltAngle, textDivStyle.fontSize).height"
+                    :height="
+                      getDynamicCellStyle(
+                        String(item),
+                        autoColumnWidth,
+                        categoryLayout,
+                        categoryTiltAngle,
+                        textDivStyle.fontSize
+                      ).height
+                    "
                     :font-size="textDivStyle.fontSize"
                     :tilt-angle="categoryTiltAngle"
                     :truncate="false"
@@ -43,13 +65,29 @@
                 <div
                   v-if="isDenseColumnVisible(index)"
                   class="table-cell-div"
-                  :style="getDynamicCellStyle(String(item), denseColumnWidth, categoryLayout, categoryTiltAngle, textDivStyle.fontSize)"
+                  :style="
+                    getDynamicCellStyle(
+                      String(item),
+                      denseColumnWidth,
+                      categoryLayout,
+                      categoryTiltAngle,
+                      textDivStyle.fontSize
+                    )
+                  "
                 >
                   <TextDiv
                     :text="item"
                     :layout="categoryLayout"
                     :width="denseColumnWidth"
-                    :height="getDynamicCellStyle(String(item), denseColumnWidth, categoryLayout, categoryTiltAngle, textDivStyle.fontSize).height"
+                    :height="
+                      getDynamicCellStyle(
+                        String(item),
+                        denseColumnWidth,
+                        categoryLayout,
+                        categoryTiltAngle,
+                        textDivStyle.fontSize
+                      ).height
+                    "
                     :font-size="textDivStyle.fontSize"
                     :tilt-angle="categoryTiltAngle"
                     :truncate="false"
@@ -70,13 +108,31 @@
             <!-- 标签列（无背景无边框） -->
             <div
               class="table-cell-div table-label-cell no-bg-no-border"
-              :style="getDynamicCellStyle(item.label, tablePosition.marginLeft, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[`${yIndex}-${item.value}`])"
+              :style="
+                getDynamicCellStyle(
+                  item.label,
+                  tablePosition.marginLeft,
+                  getHeaderLayout(item.value),
+                  getHeaderTiltAngle(item.value),
+                  textDivStyle.fontSize,
+                  rowHeights[`${yIndex}-${item.value}`]
+                )
+              "
             >
               <TextDiv
                 :text="item.label"
                 :layout="getHeaderLayout(item.value)"
                 :width="tablePosition.marginLeft"
-                :height="getDynamicCellStyle(item.label, tablePosition.marginLeft, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[`${yIndex}-${item.value}`]).height"
+                :height="
+                  getDynamicCellStyle(
+                    item.label,
+                    tablePosition.marginLeft,
+                    getHeaderLayout(item.value),
+                    getHeaderTiltAngle(item.value),
+                    textDivStyle.fontSize,
+                    rowHeights[`${yIndex}-${item.value}`]
+                  ).height
+                "
                 :font-size="textDivStyle.fontSize"
                 :tilt-angle="getHeaderTiltAngle(item.value)"
                 :truncate="false"
@@ -84,24 +140,75 @@
             </div>
             <div :style="{ display: 'flex' }">
               <!-- 正常显示或竖排/横排窄屏显示 -->
-              <template v-if="!isNarrowMode || getHeaderLayout(item.value) === 'vertical' || getHeaderLayout(item.value) === 'horizontal'">
+              <template
+                v-if="
+                  !isNarrowCell ||
+                  getHeaderLayout(item.value) === 'vertical' ||
+                  getHeaderLayout(item.value) === 'horizontal'
+                "
+              >
                 <template
                   v-for="(category, index) in visibleCategories"
                   :key="`cell-${yIndex}-${category}-${item.value}-${index}`"
                 >
                   <div
-                    v-if="isNarrowMode ? isDenseColumnVisible(index) : isColumnVisible(index)"
+                    v-if="
+                      isNarrowCell && getHeaderLayout(item.value) === 'vertical'
+                        ? isDenseColumnVisible(index)
+                        : isColumnVisible(index)
+                    "
                     class="table-cell-div"
                     :style="{
-                      ...getDynamicCellStyle(String(getVisibleValues(yAxis.values)?.[index]?.[item.value] || ''), isNarrowMode ? denseColumnWidth : autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[`${yIndex}-${item.value}`]),
-                      backgroundColor: yAxis.cellBgColors?.[visibleStartIndex + index] ?? yAxis.bgColor ?? 'transparent'
+                      ...getDynamicCellStyle(
+                        String(
+                          getVisibleValues(yAxis.values)?.[index]?.[
+                            item.value
+                          ] || ''
+                        ),
+                        isNarrowCell &&
+                          getHeaderLayout(item.value) === 'vertical'
+                          ? denseColumnWidth
+                          : autoColumnWidth,
+                        getHeaderLayout(item.value),
+                        getHeaderTiltAngle(item.value),
+                        textDivStyle.fontSize,
+                        rowHeights[`${yIndex}-${item.value}`]
+                      ),
+                      backgroundColor:
+                        yAxis.cellBgColors?.[visibleStartIndex + index] ??
+                        yAxis.bgColor ??
+                        'transparent'
                     }"
                   >
                     <TextDiv
-                      :text="String(getVisibleValues(yAxis.values)?.[index]?.[item.value] || '')"
+                      :text="
+                        String(
+                          getVisibleValues(yAxis.values)?.[index]?.[
+                            item.value
+                          ] || ''
+                        )
+                      "
                       :layout="getHeaderLayout(item.value)"
-                      :width="isNarrowMode ? denseColumnWidth : autoColumnWidth"
-                      :height="getDynamicCellStyle(String(getVisibleValues(yAxis.values)?.[index]?.[item.value] || ''), isNarrowMode ? denseColumnWidth : autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[`${yIndex}-${item.value}`]).height"
+                      :width="
+                        isNarrowCell &&
+                        getHeaderLayout(item.value) === 'vertical'
+                          ? denseColumnWidth
+                          : autoColumnWidth
+                      "
+                      :height="
+                        getDynamicCellStyle(
+                          String(
+                            getVisibleValues(yAxis.values)?.[index]?.[
+                              item.value
+                            ] || ''
+                          ),
+                          isNarrowCell ? denseColumnWidth : autoColumnWidth,
+                          getHeaderLayout(item.value),
+                          getHeaderTiltAngle(item.value),
+                          textDivStyle.fontSize,
+                          rowHeights[`${yIndex}-${item.value}`]
+                        ).height
+                      "
                       :font-size="textDivStyle.fontSize"
                       :tilt-angle="getHeaderTiltAngle(item.value)"
                       :truncate="false"
@@ -112,11 +219,21 @@
               <!-- 窄屏 tilted 布局：合并单元格显示 -->
               <template v-else>
                 <div
-                  v-for="(group, gIdx) in getCellGroups(getVisibleValues(yAxis.values), item)"
+                  v-for="(group, gIdx) in getCellGroups(
+                    getVisibleValues(yAxis.values),
+                    item
+                  )"
                   :key="`group-${yIndex}-${item.value}-${gIdx}`"
                   class="table-cell-div"
                   :style="{
-                    ...getDynamicCellStyle(group.text, group.width, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[`${yIndex}-${item.value}`]),
+                    ...getDynamicCellStyle(
+                      group.text,
+                      group.width,
+                      getHeaderLayout(item.value),
+                      getHeaderTiltAngle(item.value),
+                      textDivStyle.fontSize,
+                      rowHeights[`${yIndex}-${item.value}`]
+                    ),
                     backgroundColor: getGroupBgColor(yAxis, gIdx),
                     width: `${group.width}px`
                   }"
@@ -125,7 +242,16 @@
                     :text="group.text"
                     :layout="getHeaderLayout(item.value)"
                     :width="group.width"
-                    :height="getDynamicCellStyle(group.text, group.width, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[`${yIndex}-${item.value}`]).height"
+                    :height="
+                      getDynamicCellStyle(
+                        group.text,
+                        group.width,
+                        getHeaderLayout(item.value),
+                        getHeaderTiltAngle(item.value),
+                        textDivStyle.fontSize,
+                        rowHeights[`${yIndex}-${item.value}`]
+                      ).height
+                    "
                     :font-size="textDivStyle.fontSize"
                     :tilt-angle="getHeaderTiltAngle(item.value)"
                     :truncate="false"
@@ -169,6 +295,7 @@ const props = withDefaults(
     headerLayouts?: Record<string, HeaderLayout>
     autoInterval?: boolean
     showCategoryRow?: boolean
+    isColorByMode?: boolean
   }>(),
   {
     chart: undefined,
@@ -180,7 +307,8 @@ const props = withDefaults(
     categoryTiltAngle: 45,
     headerLayouts: () => ({}),
     autoInterval: true,
-    showCategoryRow: false
+    showCategoryRow: false,
+    isColorByMode: false
   }
 )
 
@@ -192,12 +320,23 @@ const { dataZoomState } = useDataZoomState(chartRef)
 const totalCount = computed(() => props.categories?.length || 0)
 
 const getSliceRange = () => {
-  if (!dataZoomState.value || !chartRef.value) return { start: 0, end: totalCount.value - 1 }
+  if (!dataZoomState.value || !chartRef.value)
+    return { start: 0, end: totalCount.value - 1 }
   const total = totalCount.value
-  const start = Math.max(0, Math.round((dataZoomState.value.start / 100) * (total - 1)))
-  const end = Math.min(total - 1, Math.round((dataZoomState.value.end / 100) * (total - 1)))
+  const start = Math.max(
+    0,
+    Math.round((dataZoomState.value.start / 100) * (total - 1))
+  )
+  const end = Math.min(
+    total - 1,
+    Math.round((dataZoomState.value.end / 100) * (total - 1))
+  )
   return { start, end }
 }
+
+const isNarrowCell = computed(() => {
+  return isNarrowMode.value && !props.isColorByMode
+})
 
 /**
  * 根据 dataZoom 状态截取可见的 categories
@@ -266,6 +405,7 @@ const {
   isDenseColumnVisible,
   calculateVisibleColumns,
   calculateDenseVisibleColumns,
+  calculateSparseVisibleColumns,
   getCellGroups,
   groupSize,
   buildRowHeights,
@@ -297,7 +437,10 @@ const rowHeights = computed(() => {
   const heights: Record<string, number> = {}
   props.yAxisList?.forEach((yAxis, yIndex) => {
     const visibleValues = getVisibleValues(yAxis.values)
-    const axisHeights = buildRowHeights(visibleValues, (header) => `${yIndex}-${header.value}`)
+    const axisHeights = buildRowHeights(
+      visibleValues,
+      (header) => `${yIndex}-${header.value}`
+    )
     Object.assign(heights, axisHeights)
   })
   return heights
@@ -308,9 +451,10 @@ watch(
   visibleCategories,
   (data) => {
     if (props.chart && data?.length) {
-      hideChartXAxis()
-      calculateVisibleColumns()
-      calculateDenseVisibleColumns()
+      // hideChartXAxis()
+      // calculateVisibleColumns()
+      // calculateDenseVisibleColumns()
+      // calculateSparseVisibleColumns()
     }
   },
   { immediate: true }

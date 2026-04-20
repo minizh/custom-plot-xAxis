@@ -93,7 +93,7 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
       }
       // narrowMode 下，兜底约束 horizontal 布局的单元格文本宽度
       // 防止数据行因列宽过小而文本重叠
-      if (opts.maxCellTextLength && opts.maxCellTextLength > 0) {
+      if (opts.categoryLayout !== 'vertical' && opts.maxCellTextLength && opts.maxCellTextLength > 0) {
         const horizontalWidth = opts.maxCellTextLength * charWidth.value + 4
         if (horizontalWidth > minCellWidth) {
           minCellWidth = horizontalWidth

@@ -57,7 +57,10 @@ export function useTableAxis(options: TableAxisOptions) {
 
   // 当前可见类别中的最大文本长度
   const maxTextLength = computed(() =>
-    categoriesRef.value.reduce((max, cat) => Math.max(max, String(cat).length), 0)
+    categoriesRef.value.reduce(
+      (max, cat) => Math.max(max, String(cat).length),
+      0
+    )
   )
 
   // 单元格内容的最大文本长度
@@ -74,7 +77,7 @@ export function useTableAxis(options: TableAxisOptions) {
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
     maxCellTextLength: maxCell.value,
-    categoryLayout: effectiveCategoryLayout.value,
+    categoryLayout: 'horizontal' as const,
     categoryTiltAngle: effectiveTiltAngle.value,
     fontSize: textDivStyle.fontSize,
     originWidth: tablePosition.width,
@@ -127,7 +130,11 @@ export function useTableAxis(options: TableAxisOptions) {
     calculateVisibleColumns: calculateDenseVisibleColumns
   } = useAutoInterval(denseIntervalOptions)
 
-  const { autoColumnWidth: sparseColumnWidth } = useAutoInterval(sparseIntervalOptions)
+  const {
+    autoColumnWidth: sparseColumnWidth,
+    isColumnVisible: isSparseColumnVisible,
+    calculateVisibleColumns: calculateSparseVisibleColumns
+  } = useAutoInterval(sparseIntervalOptions)
 
   /**
    * 合并分组大小：在 narrowMode 下，tilted 行按此大小合并单元格
@@ -135,7 +142,10 @@ export function useTableAxis(options: TableAxisOptions) {
    */
   const groupSize = computed(() => {
     if (!isNarrowMode.value || denseColumnWidth.value <= 0) return 1
-    return Math.max(1, Math.round(sparseColumnWidth.value / denseColumnWidth.value))
+    return Math.max(
+      1,
+      Math.round(sparseColumnWidth.value / denseColumnWidth.value)
+    )
   })
 
   /**
@@ -146,7 +156,9 @@ export function useTableAxis(options: TableAxisOptions) {
     width: number,
     layout: 'horizontal' | 'vertical' | 'tilted',
     angle: number
-  ): number => getDynamicCellStyle(text, width, layout, angle, textDivStyle.fontSize).height as number
+  ): number =>
+    getDynamicCellStyle(text, width, layout, angle, textDivStyle.fontSize)
+      .height as number
 
   /**
    * 获取指定表头在窄屏模式下的合并单元格分组
@@ -156,7 +168,9 @@ export function useTableAxis(options: TableAxisOptions) {
     const groups: { text: string; width: number }[] = []
     const size = groupSize.value
     // 只取密集模式下可见的列索引
-    const cols = categoriesRef.value.map((_, i) => i).filter(isDenseColumnVisible)
+    const cols = categoriesRef.value
+      .map((_, i) => i)
+      .filter(isDenseColumnVisible)
     for (let i = 0; i < cols.length; i += size) {
       const chunk = cols.slice(i, i + size)
       groups.push({
@@ -170,19 +184,30 @@ export function useTableAxis(options: TableAxisOptions) {
   /**
    * 计算单行中某个表头的最大高度（确保整行统一高度）
    */
-  const getRowHeight = (values: ChartDataItem[], header: TableHeader): number => {
+  const getRowHeight = (
+    values: ChartDataItem[],
+    header: TableHeader
+  ): number => {
     const layout = getHeaderLayout(header.value)
     const angle = getHeaderTiltAngle(header.value)
     let maxH = computeCellHeight('', tablePosition.marginLeft, layout, angle)
 
-    if (isNarrowMode.value && layout !== 'vertical' && layout !== 'horizontal') {
+    if (
+      isNarrowMode.value &&
+      layout !== 'vertical' &&
+      layout !== 'horizontal'
+    ) {
       // 窄屏 tilted 布局需要按合并分组计算高度
       getCellGroups(values, header).forEach((g) => {
         maxH = Math.max(maxH, computeCellHeight(g.text, g.width, layout, angle))
       })
     } else {
-      const visibleFn = isNarrowMode.value ? isDenseColumnVisible : isColumnVisible
-      const width = isNarrowMode.value ? denseColumnWidth.value : autoColumnWidth.value
+      const visibleFn = isNarrowMode.value
+        ? isDenseColumnVisible
+        : isColumnVisible
+      const width = isNarrowMode.value
+        ? denseColumnWidth.value
+        : autoColumnWidth.value
       categoriesRef.value.forEach((_, idx) => {
         if (!visibleFn(idx)) return
         const text = String(values?.[idx]?.[header.value] || '')
@@ -214,8 +239,9 @@ export function useTableAxis(options: TableAxisOptions) {
     if (dom) {
       updateNarrowMode()
       observe(dom, () => {
-        calculateVisibleColumns()
-        calculateDenseVisibleColumns()
+        // calculateVisibleColumns()
+        // calculateDenseVisibleColumns()
+        // calculateSparseVisibleColumns()
         updateNarrowMode()
       })
     }
@@ -238,6 +264,7 @@ export function useTableAxis(options: TableAxisOptions) {
     isDenseColumnVisible,
     calculateVisibleColumns,
     calculateDenseVisibleColumns,
+    calculateSparseVisibleColumns,
     groupSize,
     getCellGroups,
     computeCellHeight,

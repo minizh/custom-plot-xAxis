@@ -2,43 +2,53 @@
   <div class="chart-container">
     <el-button class="config-btn" type="primary" @click="dialogVisible = true">配置</el-button>
     <div ref="chartRef" class="chart"></div>
-    <MultiYAxisTable
-      :chart="chartInstance"
-      :categories="categories"
-      :y-axis-list="computedYAxisList"
-      :header-layouts="computedHeaderLayouts"
-      :auto-interval="true"
-      :show-category-row="false"
-    />
+    <MultiYAxisTable :chart="chartInstance" :categories="categories" :y-axis-list="computedYAxisList"
+      :header-layouts="computedHeaderLayouts" :auto-interval="true" :show-category-row="false" :isColorByMode="isColorByMode" />
     <el-dialog v-model="dialogVisible" title="多Y轴统计值表格配置" width="720px" :close-on-click-modal="false">
       <el-form label-position="top">
         <div class="config-section-title">统计值配置</div>
         <div v-for="(item, index) in statConfigs" :key="index" class="stat-config-row">
           <div class="row-index">{{ index + 1 }}</div>
-          <el-form-item label="Stat Func" class="flex-item"><el-select v-model="item.statFunc" style="width: 130px"><el-option v-for="opt in statFuncOptions" :key="opt" :label="opt" :value="opt"/></el-select></el-form-item>
-          <el-form-item label="Orientation" class="flex-item"><el-radio-group v-model="item.orientation" size="small"><el-radio-button label="horizontal">Horizontal</el-radio-button><el-radio-button label="vertical">Vertical</el-radio-button><el-radio-button label="tilted">Stanted</el-radio-button></el-radio-group></el-form-item>
-          <el-form-item v-if="item.orientation === 'tilted'" label="Angle" class="flex-item angle-item"><el-input-number v-model="item.customAngle" :min="0" :max="90" size="small" style="width: 100px"/></el-form-item>
-          <el-form-item label="Format" class="flex-item"><el-input-number v-model="item.format" :min="0" :precision="0" size="small" style="width: 90px" placeholder="小数位"/></el-form-item>
-          <el-button type="danger" size="small" :disabled="statConfigs.length <= 1" @click="removeStatConfig(index)">删除</el-button>
+          <el-form-item label="Stat Func" class="flex-item"><el-select v-model="item.statFunc"
+              style="width: 130px"><el-option v-for="opt in statFuncOptions" :key="opt" :label="opt"
+                :value="opt" /></el-select></el-form-item>
+          <el-form-item label="Orientation" class="flex-item"><el-radio-group v-model="item.orientation"
+              size="small"><el-radio-button label="horizontal">Horizontal</el-radio-button><el-radio-button
+                label="vertical">Vertical</el-radio-button><el-radio-button
+                label="tilted">Stanted</el-radio-button></el-radio-group></el-form-item>
+          <el-form-item v-if="item.orientation === 'tilted'" label="Angle" class="flex-item angle-item"><el-input-number
+              v-model="item.customAngle" :min="0" :max="90" size="small" style="width: 100px" /></el-form-item>
+          <el-form-item label="Format" class="flex-item"><el-input-number v-model="item.format" :min="0" :precision="0"
+              size="small" style="width: 90px" placeholder="小数位" /></el-form-item>
+          <el-button type="danger" size="small" :disabled="statConfigs.length <= 1"
+            @click="removeStatConfig(index)">删除</el-button>
         </div>
         <el-button type="primary" size="small" @click="addStatConfig">+ 新增配置</el-button>
         <div class="config-section-title" style="margin-top: 24px">Y轴配置</div>
         <div v-for="(_label, index) in yAxisLabels" :key="index" class="yaxis-config-row">
           <div class="row-index">{{ index + 1 }}</div>
-          <el-form-item label="Y轴 Label" class="flex-item"><el-input v-model="yAxisLabels[index]" style="width: 200px"/></el-form-item>
-          <el-button type="danger" size="small" :disabled="yAxisLabels.length <= 1" @click="removeYAxisLabel(index)">删除</el-button>
+          <el-form-item label="Y轴 Label" class="flex-item"><el-input v-model="yAxisLabels[index]"
+              style="width: 200px" /></el-form-item>
+          <el-button type="danger" size="small" :disabled="yAxisLabels.length <= 1"
+            @click="removeYAxisLabel(index)">删除</el-button>
         </div>
         <el-button type="primary" size="small" @click="addYAxisLabel">+ 新增Y轴</el-button>
         <div class="config-section-title" style="margin-top: 24px">背景色配置</div>
-        <el-form-item><el-radio-group v-model="bgColorMode"><el-radio label="gray">Gray</el-radio><el-radio label="legend">Legend Color</el-radio></el-radio-group></el-form-item>
+        <el-form-item><el-radio-group v-model="bgColorMode"><el-radio label="gray">Gray</el-radio><el-radio
+              label="legend">Legend Color</el-radio></el-radio-group></el-form-item>
         <div class="config-section-title" style="margin-top: 24px">Color By 配置</div>
         <template v-if="yAxisLabels.length > 1">
-          <div class="colorby-config-row"><div class="row-index">1</div><el-form-item label="字段" class="flex-item"><el-select v-model="colorByDisabledValue" disabled style="width: 200px"><el-option label="Y-Axis" value="Y-Axis"/></el-select></el-form-item></div>
+          <div class="colorby-config-row">
+            <div class="row-index">1</div><el-form-item label="字段" class="flex-item"><el-select
+                v-model="colorByDisabledValue" disabled style="width: 200px"><el-option label="Y-Axis"
+                  value="Y-Axis" /></el-select></el-form-item>
+          </div>
         </template>
         <template v-else>
           <div v-for="(item, index) in colorByConfigs" :key="index" class="colorby-config-row">
             <div class="row-index">{{ index + 1 }}</div>
-            <el-form-item label="字段" class="flex-item"><el-select v-model="item.field" style="width: 200px"><el-option v-for="opt in colorByFieldOptions" :key="opt" :label="opt" :value="opt"/></el-select></el-form-item>
+            <el-form-item label="字段" class="flex-item"><el-select v-model="item.field" style="width: 200px"><el-option
+                  v-for="opt in colorByFieldOptions" :key="opt" :label="opt" :value="opt" /></el-select></el-form-item>
             <el-button type="danger" size="small" @click="removeColorByConfig(index)">删除</el-button>
           </div>
           <el-button type="primary" size="small" @click="addColorByConfig">+ 新增 Color By</el-button>
@@ -87,7 +97,7 @@ const removeYAxisLabel = (index: number) => { if (yAxisLabels.value.length > 1) 
 const addColorByConfig = () => { colorByConfigs.value.push({ field: colorByFieldOptions[0] || '' }) }
 const removeColorByConfig = (index: number) => { colorByConfigs.value.splice(index, 1) }
 
-const { computedYAxisList, computedHeaderLayouts, getOption } = useMultiYAxisChart({
+const { computedYAxisList, computedHeaderLayouts, isColorByMode, getOption, } = useMultiYAxisChart({
   yAxisLabels, rawValues, statConfigs, colorByConfigs, bgColorMode
 })
 
@@ -152,17 +162,58 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.chart-container { padding: 20px; }
-.config-btn { margin-bottom: 12px; }
-.chart { width: 100%; height: 500px; min-height: 400px; }
-.config-section-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #303133; }
-.stat-config-row, .yaxis-config-row, .colorby-config-row {
-  display: flex; align-items: flex-end; gap: 12px; margin-bottom: 12px; padding: 12px; background: #fafafa; border-radius: 4px;
+.chart-container {
+  padding: 20px;
 }
+
+.config-btn {
+  margin-bottom: 12px;
+}
+
+.chart {
+  width: 100%;
+  height: 500px;
+  min-height: 400px;
+}
+
+.config-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #303133;
+}
+
+.stat-config-row,
+.yaxis-config-row,
+.colorby-config-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
 .row-index {
-  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-  background: #e4e7ed; border-radius: 50%; font-weight: bold; font-size: 13px; margin-bottom: 18px; flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e4e7ed;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 18px;
+  flex-shrink: 0;
 }
-.flex-item { margin-bottom: 0; }
-.angle-item { width: 100px; }
+
+.flex-item {
+  margin-bottom: 0;
+}
+
+.angle-item {
+  width: 100px;
+}
 </style>
