@@ -403,13 +403,9 @@ const {
   denseColumnWidth,
   isColumnVisible,
   isDenseColumnVisible,
-  calculateVisibleColumns,
-  calculateDenseVisibleColumns,
-  calculateSparseVisibleColumns,
   getCellGroups,
   groupSize,
-  buildRowHeights,
-  hideChartXAxis
+  buildRowHeights
 } = useTableAxis({
   chart: chartRef,
   categories: computed(() => visibleCategories.value),
@@ -445,20 +441,6 @@ const rowHeights = computed(() => {
   })
   return heights
 })
-
-// 数据变化时隐藏原生 X 轴并重新计算列宽
-watch(
-  visibleCategories,
-  (data) => {
-    if (props.chart && data?.length) {
-      // hideChartXAxis()
-      // calculateVisibleColumns()
-      // calculateDenseVisibleColumns()
-      // calculateSparseVisibleColumns()
-    }
-  },
-  { immediate: true }
-)
 
 // 监听 chart 实例变化，绑定 ResizeObserver
 watch(

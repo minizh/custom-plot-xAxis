@@ -4,7 +4,7 @@ import { useResizeObserver } from '@/composables/useResizeObserver'
 import { useHeaderLayout } from '@/composables/useHeaderLayout'
 import type { ChartDataItem, HeaderLayout, TableHeader } from '@/types/echarts'
 import type { ECharts } from 'echarts'
-import { computed, ref, type Ref } from 'vue'
+import { computed, nextTick, ref, watch, type Ref } from 'vue'
 import { getDynamicCellStyle } from '@/utils/chart-util'
 import { hideChartXAxis } from '@/composables/useChartCommon'
 
@@ -35,7 +35,7 @@ export function useTableAxis(options: TableAxisOptions) {
   const textDivStyle = { fontSize: 12 }
 
   // 同步 ECharts 图表的网格位置，用于对齐左侧标签列和计算单列宽度
-  const { tablePosition } = useChartPosition(
+  const { tablePosition, syncPosition } = useChartPosition(
     chartRef,
     computed(() => categoriesRef.value.length || 0)
   )
@@ -66,13 +66,20 @@ export function useTableAxis(options: TableAxisOptions) {
   // 单元格内容的最大文本长度
   const maxCell = computed(() => options.maxCellTextLength?.value || 0)
 
+  const chartContainerWidth = ref<number>(
+    chartRef.value?.getDom()?.clientWidth || 0
+  )
+  const updateChartContainerWidth = () => {
+    chartContainerWidth.value = chartRef.value?.getDom()?.clientWidth || 0
+  }
+
   /**
    * 普通自动间隔配置：用于类别行和非窄屏模式下的数据行
    * 根据 effectiveCategoryLayout 动态计算列宽
    */
   const autoIntervalOptions = computed(() => ({
     enabled: autoInterval.value,
-    containerWidth: chartRef.value?.getDom()?.clientWidth || 0,
+    containerWidth: chartContainerWidth.value,
     marginLeft: tablePosition.marginLeft,
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
@@ -90,7 +97,7 @@ export function useTableAxis(options: TableAxisOptions) {
    */
   const denseIntervalOptions = computed(() => ({
     enabled: autoInterval.value && isNarrowMode.value,
-    containerWidth: chartRef.value?.getDom()?.clientWidth || 0,
+    containerWidth: chartContainerWidth.value,
     marginLeft: tablePosition.marginLeft,
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
@@ -108,7 +115,7 @@ export function useTableAxis(options: TableAxisOptions) {
    */
   const sparseIntervalOptions = computed(() => ({
     enabled: autoInterval.value && isNarrowMode.value,
-    containerWidth: chartRef.value?.getDom()?.clientWidth || 0,
+    containerWidth: chartContainerWidth.value,
     marginLeft: tablePosition.marginLeft,
     totalColumns: categoriesRef.value.length || 0,
     maxTextLength: maxTextLength.value,
@@ -238,11 +245,11 @@ export function useTableAxis(options: TableAxisOptions) {
     const dom = chartRef.value?.getDom()
     if (dom) {
       updateNarrowMode()
-      observe(dom, () => {
-        // calculateVisibleColumns()
-        // calculateDenseVisibleColumns()
-        // calculateSparseVisibleColumns()
+      observe(dom, async () => {
+        // await nextTick()
         updateNarrowMode()
+        updateChartContainerWidth()
+        syncPosition()
       })
     }
   }

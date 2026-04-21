@@ -1,4 +1,4 @@
-import { computed, ref, watch, type Ref } from 'vue'
+import { computed, nextTick, ref, watch, type Ref } from 'vue'
 
 export interface AutoIntervalOptions {
   enabled: boolean
@@ -67,10 +67,7 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
       return
     }
 
-    const textLength = Math.max(
-      opts.maxTextLength,
-      opts.maxCellTextLength || 0
-    )
+    const textLength = Math.max(opts.maxTextLength, opts.maxCellTextLength || 0)
 
     const labelWidth = calculateLabelWidth(
       opts.categoryLayout,
@@ -93,7 +90,11 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
       }
       // narrowMode 下，兜底约束 horizontal 布局的单元格文本宽度
       // 防止数据行因列宽过小而文本重叠
-      if (opts.categoryLayout !== 'vertical' && opts.maxCellTextLength && opts.maxCellTextLength > 0) {
+      if (
+        opts.categoryLayout !== 'vertical' &&
+        opts.maxCellTextLength &&
+        opts.maxCellTextLength > 0
+      ) {
         const horizontalWidth = opts.maxCellTextLength * charWidth.value + 4
         if (horizontalWidth > minCellWidth) {
           minCellWidth = horizontalWidth
@@ -148,8 +149,9 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
 
   // 监听配置变化，自动重新计算
   watch(
-    () => options.value,
-    () => {
+    () => options.value.originWidth,
+    async (newValue, oldValue) => {
+      await nextTick()
       calculateVisibleColumns()
     },
     { deep: true }

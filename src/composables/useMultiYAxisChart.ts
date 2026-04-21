@@ -1,3 +1,4 @@
+import { HeaderLayout } from '@/types/echarts'
 import { generateColors } from '@/utils/color-util'
 import type { EChartsOption } from 'echarts'
 import { computed, type Ref } from 'vue'
@@ -116,7 +117,7 @@ export function useMultiYAxisChart(options: MultiYAxisChartOptions) {
    * 计算传给表格组件的各列布局配置（布局方式 + 倾斜角度）
    */
   const computedHeaderLayouts = computed(() => {
-    const layouts: Record<string, { layout: string; tiltAngle: number }> = {}
+    const layouts: Record<string, HeaderLayout> = {}
     statConfigs.value.forEach((cfg, index) => {
       const key = cfg.statFunc + '_' + index
       layouts[key] = {
