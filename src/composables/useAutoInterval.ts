@@ -107,11 +107,8 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
         { length: opts.totalColumns },
         (_, i) => i
       )
-      // 兜底：当 narrowMode 下内容过长时，列宽不应小于 minCellWidth
-      autoColumnWidth.value = Math.max(
-        opts.originWidth,
-        Math.ceil(minCellWidth)
-      )
+      // 以 X 轴总宽度平均分配列宽，确保表格总宽度始终与 X 轴对齐
+      autoColumnWidth.value = availableWidth / opts.totalColumns
       return
     }
 
@@ -135,10 +132,8 @@ export function useAutoInterval(options: Ref<AutoIntervalOptions>) {
     }
 
     visibleColumns.value = selectedIndices.sort((a, b) => a - b)
-    autoColumnWidth.value = Math.max(
-      Math.ceil(labelWidth),
-      Math.floor(availableWidth / visibleCount)
-    )
+    // 以 X 轴总宽度平均分配列宽，确保表格总宽度始终与 X 轴对齐
+    autoColumnWidth.value = availableWidth / visibleCount
   }
 
   /**
