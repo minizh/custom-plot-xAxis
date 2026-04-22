@@ -85,21 +85,21 @@
         <!-- 右侧数据列 -->
         <div :style="{ display: 'flex' }">
           <!-- 正常显示或竖排/横排窄屏显示 -->
-          <template v-if="!headerColumnConfigs[item.value]?.isNarrowMode || getHeaderLayout(item.value) === 'vertical' || getHeaderLayout(item.value) === 'horizontal'">
+          <template v-if="!isNarrowMode || getHeaderLayout(item.value) === 'vertical' || getHeaderLayout(item.value) === 'horizontal'">
             <template
               v-for="(category, index) in visibleData?.categories || []"
               :key="`cell-${category}-${item.value}-${index}`"
             >
               <div
-                v-if="headerColumnConfigs[item.value]?.isNarrowMode ? headerColumnConfigs[item.value]?.denseVisibleColumns?.includes(index) : headerColumnConfigs[item.value]?.visibleColumns?.includes(index)"
+                v-if="isNarrowMode ? (headerColumnConfigs[item.value]?.denseVisibleColumns?.includes(index) ?? isDenseColumnVisible(index)) : isColumnVisible(index)"
                 class="table-cell-div"
-                :style="getDynamicCellStyle(String(visibleData.values?.[index]?.[item.value] || ''), headerColumnConfigs[item.value]?.isNarrowMode ? headerColumnConfigs[item.value]?.denseColumnWidth : headerColumnConfigs[item.value]?.autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[item.value])"
+                :style="getDynamicCellStyle(String(visibleData.values?.[index]?.[item.value] || ''), isNarrowMode ? (headerColumnConfigs[item.value]?.denseColumnWidth ?? denseColumnWidth) : autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[item.value])"
               >
                 <TextDiv
                   :text="String(visibleData.values?.[index]?.[item.value] || '')"
                   :layout="getHeaderLayout(item.value)"
-                  :width="headerColumnConfigs[item.value]?.isNarrowMode ? headerColumnConfigs[item.value]?.denseColumnWidth : headerColumnConfigs[item.value]?.autoColumnWidth"
-                  :height="getDynamicCellStyle(String(visibleData.values?.[index]?.[item.value] || ''), headerColumnConfigs[item.value]?.isNarrowMode ? headerColumnConfigs[item.value]?.denseColumnWidth : headerColumnConfigs[item.value]?.autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[item.value]).height"
+                  :width="isNarrowMode ? (headerColumnConfigs[item.value]?.denseColumnWidth ?? denseColumnWidth) : autoColumnWidth"
+                  :height="getDynamicCellStyle(String(visibleData.values?.[index]?.[item.value] || ''), isNarrowMode ? (headerColumnConfigs[item.value]?.denseColumnWidth ?? denseColumnWidth) : autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[item.value]).height"
                   :font-size="textDivStyle.fontSize"
                   :tilt-angle="getHeaderTiltAngle(item.value)"
                   :truncate="false"

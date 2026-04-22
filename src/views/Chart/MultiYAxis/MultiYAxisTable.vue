@@ -461,23 +461,19 @@ const getRowConfig = (yIndex: number, headerValue: string): HeaderColumnConfig |
 }
 
 const getRowIsNarrow = (yIndex: number, headerValue: string): boolean => {
-  if (props.isColorByMode) return isNarrowCell.value
+  if (!isNarrowCell.value) return isNarrowCell.value
   return getRowConfig(yIndex, headerValue)?.isNarrowMode ?? false
 }
 
 const getRowColumnWidth = (yIndex: number, headerValue: string, isVertical: boolean): number => {
-  if (props.isColorByMode) {
-    return isNarrowCell.value && isVertical ? denseColumnWidth.value : autoColumnWidth.value
-  }
+  if (!isNarrowCell.value) return autoColumnWidth.value
   const config = getRowConfig(yIndex, headerValue)
   if (!config) return autoColumnWidth.value
   return config.isNarrowMode && isVertical ? config.denseColumnWidth : config.autoColumnWidth
 }
 
 const isRowCellVisible = (yIndex: number, headerValue: string, index: number, isVertical: boolean): boolean => {
-  if (props.isColorByMode) {
-    return isNarrowCell.value && isVertical ? isDenseColumnVisible(index) : isColumnVisible(index)
-  }
+  if (!isNarrowCell.value) return isColumnVisible(index)
   const config = getRowConfig(yIndex, headerValue)
   if (!config) return isColumnVisible(index)
   return config.isNarrowMode && isVertical
@@ -487,7 +483,7 @@ const isRowCellVisible = (yIndex: number, headerValue: string, index: number, is
 
 const getRowCellGroups = (yIndex: number, yAxis: YAxisTableItem, header: TableHeader) => {
   const values = getVisibleValues(yAxis.values)
-  if (props.isColorByMode) return getCellGroups(values, header)
+  if (!isNarrowCell.value) return getCellGroups(values, header)
   const config = getRowConfig(yIndex, header.value)
   if (!config) return getCellGroups(values, header)
   return getHeaderCellGroups({ [header.value]: config }, values, header)
@@ -496,7 +492,7 @@ const getRowCellGroups = (yIndex: number, yAxis: YAxisTableItem, header: TableHe
 const getRowGroupBgColor = (yAxis: YAxisTableItem, gIdx: number, yIndex: number, headerValue: string) => {
   if (!yAxis.cellBgColors?.length) return yAxis.bgColor ?? 'transparent'
   const config = getRowConfig(yIndex, headerValue)
-  if (!config || props.isColorByMode) {
+  if (!config || !isNarrowCell.value) {
     const size = groupSize.value
     const cols = (props.categories || [])
       .map((_, idx) => idx)
