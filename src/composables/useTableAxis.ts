@@ -48,12 +48,44 @@ export function useTableAxis(options: TableAxisOptions) {
     effectiveTiltAngle
   } = useHeaderLayout(options)
 
-  // 窄屏模式：图表容器宽度 < 600px 时开启
-  const isNarrowMode = ref(false)
-  const updateNarrowMode = () => {
-    const w = chartRef.value?.getDom()?.clientWidth || 0
-    isNarrowMode.value = w > 0 && w < 600
-  }
+  // 窄屏模式：当数据量大于当前图表容器宽度下能显示的最大列数时开启
+  const isNarrowMode = computed(() => {
+    const total = categoriesRef.value.length
+    if (total <= 0) return false
+
+    const containerWidth = chartRef.value?.getDom()?.clientWidth || 0
+    const availableWidth =
+      tablePosition.width > 0
+        ? tablePosition.width * total
+        : containerWidth - tablePosition.marginLeft - 20
+
+    const textLength = Math.max(maxTextLength.value, maxCell.value)
+    const layout = effectiveCategoryLayout.value
+    const angle = effectiveTiltAngle.value
+    const fontSize = textDivStyle.fontSize
+    const charW = fontSize * 0.55
+    const charH = fontSize
+
+    let labelWidth: number
+    switch (layout) {
+      case 'vertical':
+        labelWidth = charH
+        break
+      case 'tilted': {
+        const radian = (angle * Math.PI) / 180
+        labelWidth = textLength * charW * Math.cos(radian) + charH * Math.sin(radian)
+        break
+      }
+      case 'horizontal':
+      default:
+        labelWidth = textLength * charW
+        break
+    }
+
+    const minCellWidth = labelWidth + 4
+    const maxVisibleColumns = Math.floor(availableWidth / minCellWidth)
+    return total > maxVisibleColumns
+  })
 
   // 当前可见类别中的最大文本长度
   const maxTextLength = computed(() =>
@@ -244,10 +276,8 @@ export function useTableAxis(options: TableAxisOptions) {
   const bindResizeObserver = () => {
     const dom = chartRef.value?.getDom()
     if (dom) {
-      updateNarrowMode()
-      observe(dom, async () => {
-        // await nextTick()
-        updateNarrowMode()
+      syncPosition()
+      observe(dom, () => {
         updateChartContainerWidth()
         syncPosition()
       })
@@ -262,7 +292,6 @@ export function useTableAxis(options: TableAxisOptions) {
     effectiveCategoryLayout,
     effectiveTiltAngle,
     isNarrowMode,
-    updateNarrowMode,
     bindResizeObserver,
     autoColumnWidth,
     denseColumnWidth,

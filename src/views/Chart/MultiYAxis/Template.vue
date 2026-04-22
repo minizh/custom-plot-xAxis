@@ -20,7 +20,18 @@
       :close-on-click-modal="false"
     >
       <el-form label-position="top">
-        <div class="config-section-title">统计值配置</div>
+        <div class="config-section-title">数据量配置</div>
+        <el-form-item label="数据量">
+          <el-input-number
+            v-model="dataCount"
+            :min="1"
+            :max="200"
+            :precision="0"
+            size="small"
+            style="width: 120px"
+          />
+        </el-form-item>
+        <div class="config-section-title" style="margin-top: 12px">统计值配置</div>
         <div
           v-for="(item, index) in statConfigs"
           :key="index"
@@ -175,6 +186,7 @@ const categories = ref<string[]>([])
 const rawValues = ref<Record<string, unknown>[]>([])
 const dialogVisible = ref(false)
 const bgColorMode = ref<'gray' | 'legend'>('gray')
+const dataCount = ref(15)
 
 const statFuncOptions = [
   'svg',
@@ -267,7 +279,7 @@ const generateData = () => {
   const waferIds = ['W1', 'W2', 'W3', 'W4', 'W5']
   const parameters = ['ParamA', 'ParamB', 'ParamC']
   const testPrograms = ['TP1', 'TP2']
-  for (let i = 1; i <= 15; i++) {
+  for (let i = 1; i <= dataCount.value; i++) {
     const baseValue = Math.floor(Math.random() * 100) + 20
     const item: Record<string, unknown> = {
       name: `测试数据${i}`,
@@ -302,6 +314,7 @@ const generateData = () => {
 }
 
 const handleConfirm = () => {
+  generateData()
   setChartOption(getOption(), true)
   dialogVisible.value = false
 }
