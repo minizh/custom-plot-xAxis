@@ -85,21 +85,21 @@
         <!-- 右侧数据列 -->
         <div :style="{ display: 'flex' }">
           <!-- 正常显示或竖排/横排窄屏显示 -->
-          <template v-if="!isNarrowMode || getHeaderLayout(item.value) === 'vertical' || getHeaderLayout(item.value) === 'horizontal'">
+          <template v-if="!headerColumnConfigs[item.value]?.isNarrowMode || getHeaderLayout(item.value) === 'vertical' || getHeaderLayout(item.value) === 'horizontal'">
             <template
               v-for="(category, index) in visibleData?.categories || []"
               :key="`cell-${category}-${item.value}-${index}`"
             >
               <div
-                v-if="isNarrowMode ? isDenseColumnVisible(index) : isColumnVisible(index)"
+                v-if="headerColumnConfigs[item.value]?.isNarrowMode ? headerColumnConfigs[item.value]?.denseVisibleColumns?.includes(index) : headerColumnConfigs[item.value]?.visibleColumns?.includes(index)"
                 class="table-cell-div"
-                :style="getDynamicCellStyle(String(visibleData.values?.[index]?.[item.value] || ''), isNarrowMode ? denseColumnWidth : autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[item.value])"
+                :style="getDynamicCellStyle(String(visibleData.values?.[index]?.[item.value] || ''), headerColumnConfigs[item.value]?.isNarrowMode ? headerColumnConfigs[item.value]?.denseColumnWidth : headerColumnConfigs[item.value]?.autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[item.value])"
               >
                 <TextDiv
                   :text="String(visibleData.values?.[index]?.[item.value] || '')"
                   :layout="getHeaderLayout(item.value)"
-                  :width="isNarrowMode ? denseColumnWidth : autoColumnWidth"
-                  :height="getDynamicCellStyle(String(visibleData.values?.[index]?.[item.value] || ''), isNarrowMode ? denseColumnWidth : autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[item.value]).height"
+                  :width="headerColumnConfigs[item.value]?.isNarrowMode ? headerColumnConfigs[item.value]?.denseColumnWidth : headerColumnConfigs[item.value]?.autoColumnWidth"
+                  :height="getDynamicCellStyle(String(visibleData.values?.[index]?.[item.value] || ''), headerColumnConfigs[item.value]?.isNarrowMode ? headerColumnConfigs[item.value]?.denseColumnWidth : headerColumnConfigs[item.value]?.autoColumnWidth, getHeaderLayout(item.value), getHeaderTiltAngle(item.value), textDivStyle.fontSize, rowHeights[item.value]).height"
                   :font-size="textDivStyle.fontSize"
                   :tilt-angle="getHeaderTiltAngle(item.value)"
                   :truncate="false"
@@ -110,7 +110,7 @@
           <!-- 窄屏 tilted 布局：按 groupSize 合并单元格显示 -->
           <template v-else>
             <div
-              v-for="(group, gIdx) in getCellGroups(visibleData.values || [], item)"
+              v-for="(group, gIdx) in getHeaderCellGroups(headerColumnConfigs, visibleData.values || [], item)"
               :key="`group-${item.value}-${gIdx}`"
               class="table-cell-div"
               :style="{
@@ -138,7 +138,7 @@
 <script setup lang="ts">
 import TextDiv from '@/components/TextDiv/TextDiv.vue'
 import { useChartDataZoom } from '@/composables/useChartDataZoom'
-import { useTableAxis } from '@/composables/useTableAxis'
+import { useTableAxis, type HeaderColumnConfig } from '@/composables/useTableAxis'
 import type { HeaderLayout, TableChartData, TableHeader } from '@/types/echarts'
 import type { ECharts } from 'echarts'
 import { computed, toRef, watch } from 'vue'
@@ -208,6 +208,8 @@ const {
   calculateVisibleColumns,
   calculateDenseVisibleColumns,
   getCellGroups,
+  buildHeaderColumnConfigs,
+  getHeaderCellGroups,
   buildRowHeights,
   hideChartXAxis
 } = useTableAxis({
@@ -226,6 +228,11 @@ const {
 // 行高：为每个 header 计算最大所需高度，保证整行对齐
 const rowHeights = computed(() => {
   return buildRowHeights(visibleData.value?.values || [], (header) => header.value)
+})
+
+// 按表头独立计算的列宽与可见列配置
+const headerColumnConfigs = computed<Record<string, HeaderColumnConfig>>(() => {
+  return buildHeaderColumnConfigs(visibleData.value?.values || [])
 })
 
 // 数据变化时：隐藏原生 X 轴并重新计算列宽

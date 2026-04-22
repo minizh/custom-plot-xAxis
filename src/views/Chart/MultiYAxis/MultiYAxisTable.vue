@@ -142,7 +142,7 @@
               <!-- 正常显示或竖排/横排窄屏显示 -->
               <template
                 v-if="
-                  !isNarrowCell ||
+                  !getRowIsNarrow(yIndex, item.value) ||
                   getHeaderLayout(item.value) === 'vertical' ||
                   getHeaderLayout(item.value) === 'horizontal'
                 "
@@ -153,9 +153,12 @@
                 >
                   <div
                     v-if="
-                      isNarrowCell && getHeaderLayout(item.value) === 'vertical'
-                        ? isDenseColumnVisible(index)
-                        : isColumnVisible(index)
+                      isRowCellVisible(
+                        yIndex,
+                        item.value,
+                        index,
+                        getHeaderLayout(item.value) === 'vertical'
+                      )
                     "
                     class="table-cell-div"
                     :style="{
@@ -165,10 +168,11 @@
                             item.value
                           ] || ''
                         ),
-                        isNarrowCell &&
+                        getRowColumnWidth(
+                          yIndex,
+                          item.value,
                           getHeaderLayout(item.value) === 'vertical'
-                          ? denseColumnWidth
-                          : autoColumnWidth,
+                        ),
                         getHeaderLayout(item.value),
                         getHeaderTiltAngle(item.value),
                         textDivStyle.fontSize,
@@ -190,10 +194,11 @@
                       "
                       :layout="getHeaderLayout(item.value)"
                       :width="
-                        isNarrowCell &&
-                        getHeaderLayout(item.value) === 'vertical'
-                          ? denseColumnWidth
-                          : autoColumnWidth
+                        getRowColumnWidth(
+                          yIndex,
+                          item.value,
+                          getHeaderLayout(item.value) === 'vertical'
+                        )
                       "
                       :height="
                         getDynamicCellStyle(
@@ -202,7 +207,11 @@
                               item.value
                             ] || ''
                           ),
-                          isNarrowCell ? denseColumnWidth : autoColumnWidth,
+                          getRowColumnWidth(
+                            yIndex,
+                            item.value,
+                            getHeaderLayout(item.value) === 'vertical'
+                          ),
                           getHeaderLayout(item.value),
                           getHeaderTiltAngle(item.value),
                           textDivStyle.fontSize,
@@ -219,8 +228,9 @@
               <!-- 窄屏 tilted 布局：合并单元格显示 -->
               <template v-else>
                 <div
-                  v-for="(group, gIdx) in getCellGroups(
-                    getVisibleValues(yAxis.values),
+                  v-for="(group, gIdx) in getRowCellGroups(
+                    yIndex,
+                    yAxis,
                     item
                   )"
                   :key="`group-${yIndex}-${item.value}-${gIdx}`"
@@ -234,7 +244,7 @@
                       textDivStyle.fontSize,
                       rowHeights[`${yIndex}-${item.value}`]
                     ),
-                    backgroundColor: getGroupBgColor(yAxis, gIdx),
+                    backgroundColor: getRowGroupBgColor(yAxis, gIdx, yIndex, item.value),
                     width: `${group.width}px`
                   }"
                 >
@@ -269,11 +279,11 @@
 <script setup lang="ts">
 import TextDiv from '@/components/TextDiv/TextDiv.vue'
 import { useDataZoomState } from '@/composables/useChartCommon'
-import { useTableAxis } from '@/composables/useTableAxis'
+import { useTableAxis, type HeaderColumnConfig } from '@/composables/useTableAxis'
 import type { ChartDataItem, HeaderLayout, TableHeader } from '@/types/echarts'
 import type { ECharts } from 'echarts'
 import { computed, toRef, watch } from 'vue'
-import { getDynamicCellStyle } from '@/utils/chart-util'
+import { calculateColumnState, getDynamicCellStyle } from '@/utils/chart-util'
 
 export interface YAxisTableItem {
   name: string
@@ -404,8 +414,11 @@ const {
   isColumnVisible,
   isDenseColumnVisible,
   getCellGroups,
+  getHeaderCellGroups,
   groupSize,
-  buildRowHeights
+  buildHeaderColumnConfigs,
+  buildRowHeights,
+  maxTextLength
 } = useTableAxis({
   chart: chartRef,
   categories: computed(() => visibleCategories.value),
@@ -427,6 +440,110 @@ const {
   headerLayouts: computed(() => props.headerLayouts),
   autoInterval: computed(() => props.autoInterval)
 })
+
+// 非 Color By 模式下，每个 yAxis 每个 header 的独立列宽配置
+const perHeaderConfigs = computed<Record<string, HeaderColumnConfig>>(() => {
+  if (props.isColorByMode) return {}
+  const result: Record<string, HeaderColumnConfig> = {}
+  props.yAxisList?.forEach((yAxis, yIndex) => {
+    const visibleValues = getVisibleValues(yAxis.values)
+    const configs = buildHeaderColumnConfigs(visibleValues)
+    Object.entries(configs).forEach(([key, config]) => {
+      result[`${yIndex}-${key}`] = config
+    })
+  })
+  return result
+})
+
+const getRowConfig = (yIndex: number, headerValue: string): HeaderColumnConfig | null => {
+  if (props.isColorByMode) return null
+  return perHeaderConfigs.value[`${yIndex}-${headerValue}`] ?? null
+}
+
+const getRowIsNarrow = (yIndex: number, headerValue: string): boolean => {
+  if (props.isColorByMode) return isNarrowCell.value
+  return getRowConfig(yIndex, headerValue)?.isNarrowMode ?? false
+}
+
+const getRowColumnWidth = (yIndex: number, headerValue: string, isVertical: boolean): number => {
+  if (props.isColorByMode) {
+    return isNarrowCell.value && isVertical ? denseColumnWidth.value : autoColumnWidth.value
+  }
+  const config = getRowConfig(yIndex, headerValue)
+  if (!config) return autoColumnWidth.value
+  return config.isNarrowMode && isVertical ? config.denseColumnWidth : config.autoColumnWidth
+}
+
+const isRowCellVisible = (yIndex: number, headerValue: string, index: number, isVertical: boolean): boolean => {
+  if (props.isColorByMode) {
+    return isNarrowCell.value && isVertical ? isDenseColumnVisible(index) : isColumnVisible(index)
+  }
+  const config = getRowConfig(yIndex, headerValue)
+  if (!config) return isColumnVisible(index)
+  return config.isNarrowMode && isVertical
+    ? config.denseVisibleColumns.includes(index)
+    : config.visibleColumns.includes(index)
+}
+
+const getRowCellGroups = (yIndex: number, yAxis: YAxisTableItem, header: TableHeader) => {
+  const values = getVisibleValues(yAxis.values)
+  if (props.isColorByMode) return getCellGroups(values, header)
+  const config = getRowConfig(yIndex, header.value)
+  if (!config) return getCellGroups(values, header)
+  return getHeaderCellGroups({ [header.value]: config }, values, header)
+}
+
+const getRowGroupBgColor = (yAxis: YAxisTableItem, gIdx: number, yIndex: number, headerValue: string) => {
+  if (!yAxis.cellBgColors?.length) return yAxis.bgColor ?? 'transparent'
+  const config = getRowConfig(yIndex, headerValue)
+  if (!config || props.isColorByMode) {
+    const size = groupSize.value
+    const cols = (props.categories || [])
+      .map((_, idx) => idx)
+      .filter((idx) => isDenseColumnVisible(idx))
+    const firstIdx = cols[gIdx * size]
+    if (firstIdx === undefined) return yAxis.bgColor ?? 'transparent'
+    return yAxis.cellBgColors[firstIdx] ?? yAxis.bgColor ?? 'transparent'
+  }
+
+  const cols = config.denseVisibleColumns
+  const angle = getHeaderTiltAngle(headerValue)
+  const total = props.categories?.length || 0
+  const containerWidth = chartRef.value?.getDom()?.clientWidth || 0
+  const availableWidth =
+    tablePosition.width > 0
+      ? tablePosition.width * total
+      : containerWidth - tablePosition.marginLeft - 20
+
+  let rowMaxCellTextLength = 0
+  getVisibleValues(yAxis.values).forEach((item) => {
+    const text = String(item[headerValue] ?? '')
+    if (text.length > rowMaxCellTextLength) rowMaxCellTextLength = text.length
+  })
+
+  const sparseState = calculateColumnState({
+    enabled: true,
+    totalColumns: total,
+    originWidth: tablePosition.width,
+    containerWidth,
+    marginLeft: tablePosition.marginLeft,
+    maxTextLength: maxTextLength.value,
+    maxCellTextLength: rowMaxCellTextLength,
+    categoryLayout: 'tilted',
+    categoryTiltAngle: angle,
+    fontSize: textDivStyle.fontSize,
+    narrowMode: true
+  })
+
+  const size =
+    config.denseColumnWidth > 0
+      ? Math.max(1, Math.round(sparseState.autoColumnWidth / config.denseColumnWidth))
+      : 1
+
+  const firstIdx = cols[gIdx * size]
+  if (firstIdx === undefined) return yAxis.bgColor ?? 'transparent'
+  return yAxis.cellBgColors[firstIdx] ?? yAxis.bgColor ?? 'transparent'
+}
 
 // 为每个 yAxis 的每个 header 计算行高
 const rowHeights = computed(() => {

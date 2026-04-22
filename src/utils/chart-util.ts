@@ -139,6 +139,142 @@ export const measureByDOM = (text: string, fontSize: number): number => {
 }
 
 /**
+ * 列宽计算选项
+ */
+export interface ColumnStateOptions {
+  enabled: boolean
+  totalColumns: number
+  originWidth: number
+  containerWidth: number
+  marginLeft: number
+  maxTextLength: number
+  maxCellTextLength?: number
+  categoryLayout: 'horizontal' | 'vertical' | 'tilted'
+  categoryTiltAngle: number
+  fontSize: number
+  narrowMode?: boolean
+}
+
+/**
+ * 列宽计算结果
+ */
+export interface ColumnStateResult {
+  visibleColumns: number[]
+  autoColumnWidth: number
+}
+
+/**
+ * 根据布局方式计算标签的占位宽度
+ * - horizontal: 文本总宽度
+ * - vertical: 字符高度（即竖排时占用的水平宽度）
+ * - tilted: 倾斜后文本在水平方向的投影宽度 + 高度投影
+ */
+const calculateLabelWidth = (
+  layout: 'horizontal' | 'vertical' | 'tilted',
+  tiltAngle: number,
+  textLength: number,
+  fontSize: number
+): number => {
+  const cw = fontSize * 0.55
+  const ch = fontSize
+
+  switch (layout) {
+    case 'vertical':
+      return ch
+    case 'tilted': {
+      const radian = (tiltAngle * Math.PI) / 180
+      return textLength * cw * Math.cos(radian) + ch * Math.sin(radian)
+    }
+    case 'horizontal':
+    default:
+      return textLength * cw
+  }
+}
+
+/**
+ * 纯函数：根据容器宽度和标签布局计算可见列索引与列宽
+ * 用于表格轴/自定义 X 轴在空间不足时自动间隔显示
+ */
+export const calculateColumnState = (
+  options: ColumnStateOptions
+): ColumnStateResult => {
+  if (!options.enabled || options.totalColumns <= 0) {
+    return { visibleColumns: [], autoColumnWidth: options.originWidth }
+  }
+
+  const textLength = Math.max(
+    options.maxTextLength,
+    options.maxCellTextLength || 0
+  )
+
+  const labelWidth = calculateLabelWidth(
+    options.categoryLayout,
+    options.categoryTiltAngle,
+    textLength,
+    options.fontSize
+  )
+
+  const availableWidth =
+    options.originWidth > 0
+      ? options.originWidth * options.totalColumns
+      : options.containerWidth - options.marginLeft - 20
+
+  let minCellWidth = labelWidth + 4
+  if (options.narrowMode) {
+    if (options.categoryLayout === 'tilted') {
+      minCellWidth = Math.ceil(labelWidth * 1.2 + 4)
+    } else if (options.categoryLayout === 'vertical') {
+      minCellWidth = labelWidth
+    }
+    if (
+      options.categoryLayout !== 'vertical' &&
+      options.maxCellTextLength &&
+      options.maxCellTextLength > 0
+    ) {
+      const charWidth = options.fontSize * 0.55
+      const horizontalWidth = options.maxCellTextLength * charWidth + 4
+      if (horizontalWidth > minCellWidth) {
+        minCellWidth = horizontalWidth
+      }
+    }
+  }
+
+  // 若所有列都能放下，则全部显示
+  if (options.totalColumns * minCellWidth <= availableWidth) {
+    return {
+      visibleColumns: Array.from(
+        { length: options.totalColumns },
+        (_, i) => i
+      ),
+      autoColumnWidth: availableWidth / options.totalColumns
+    }
+  }
+
+  // 否则计算最多能显示多少列，并均匀采样
+  const maxVisibleColumns = Math.floor(availableWidth / minCellWidth)
+  const visibleCount = Math.max(1, maxVisibleColumns)
+
+  const selectedIndices: number[] = []
+  const step = (options.totalColumns - 1) / (visibleCount - 1)
+
+  for (let i = 0; i < visibleCount; i++) {
+    if (i === visibleCount - 1) {
+      selectedIndices.push(options.totalColumns - 1)
+    } else {
+      const index = Math.round(i * step)
+      if (!selectedIndices.includes(index)) {
+        selectedIndices.push(index)
+      }
+    }
+  }
+
+  return {
+    visibleColumns: selectedIndices.sort((a, b) => a - b),
+    autoColumnWidth: availableWidth / visibleCount
+  }
+}
+
+/**
  * 计算在最多显示 max 个标签时的最佳均匀采样索引序列
  * @param N - 总标签数
  * @param max - 最大可显示数量

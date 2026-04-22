@@ -5,8 +5,19 @@ import { useHeaderLayout } from '@/composables/useHeaderLayout'
 import type { ChartDataItem, HeaderLayout, TableHeader } from '@/types/echarts'
 import type { ECharts } from 'echarts'
 import { computed, nextTick, ref, watch, type Ref } from 'vue'
-import { getDynamicCellStyle } from '@/utils/chart-util'
+import { calculateColumnState, getDynamicCellStyle } from '@/utils/chart-util'
 import { hideChartXAxis } from '@/composables/useChartCommon'
+
+/**
+ * 单表头列宽配置
+ */
+export interface HeaderColumnConfig {
+  autoColumnWidth: number
+  denseColumnWidth: number
+  visibleColumns: number[]
+  denseVisibleColumns: number[]
+  isNarrowMode: boolean
+}
 
 export interface TableAxisOptions {
   chart: Ref<ECharts | undefined>
@@ -200,7 +211,73 @@ export function useTableAxis(options: TableAxisOptions) {
       .height as number
 
   /**
-   * 获取指定表头在窄屏模式下的合并单元格分组
+   * 为指定数据批量计算每个表头的列宽与可见列配置
+   * 非 Color By 模式下使用，每行根据自身内容长度独立计算
+   */
+  const buildHeaderColumnConfigs = (
+    values: ChartDataItem[]
+  ): Record<string, HeaderColumnConfig> => {
+    const total = categoriesRef.value.length
+    const containerWidth = chartRef.value?.getDom()?.clientWidth || 0
+    const availableWidth =
+      tablePosition.width > 0
+        ? tablePosition.width * total
+        : containerWidth - tablePosition.marginLeft - 20
+
+    const configs: Record<string, HeaderColumnConfig> = {}
+
+    headersRef.value?.forEach((header) => {
+      let rowMaxCellTextLength = 0
+      values.forEach((item) => {
+        const text = String(item[header.value] ?? '')
+        if (text.length > rowMaxCellTextLength) rowMaxCellTextLength = text.length
+      })
+
+      const layout = getHeaderLayout(header.value)
+      const angle = getHeaderTiltAngle(header.value)
+
+      const normalState = calculateColumnState({
+        enabled: true,
+        totalColumns: total,
+        originWidth: tablePosition.width,
+        containerWidth,
+        marginLeft: tablePosition.marginLeft,
+        maxTextLength: maxTextLength.value,
+        maxCellTextLength: rowMaxCellTextLength,
+        categoryLayout: layout === 'tilted' ? 'tilted' : layout === 'vertical' ? 'vertical' : 'horizontal',
+        categoryTiltAngle: angle,
+        fontSize: textDivStyle.fontSize,
+        narrowMode: false
+      })
+
+      const denseState = calculateColumnState({
+        enabled: true,
+        totalColumns: total,
+        originWidth: tablePosition.width,
+        containerWidth,
+        marginLeft: tablePosition.marginLeft,
+        maxTextLength: maxTextLength.value,
+        maxCellTextLength: rowMaxCellTextLength,
+        categoryLayout: 'vertical',
+        categoryTiltAngle: 0,
+        fontSize: textDivStyle.fontSize,
+        narrowMode: true
+      })
+
+      configs[header.value] = {
+        autoColumnWidth: normalState.autoColumnWidth,
+        denseColumnWidth: denseState.autoColumnWidth,
+        visibleColumns: normalState.visibleColumns,
+        denseVisibleColumns: denseState.visibleColumns,
+        isNarrowMode: normalState.visibleColumns.length < total
+      }
+    })
+
+    return configs
+  }
+
+  /**
+   * 获取指定表头在窄屏模式下的合并单元格分组（全局配置版本）
    * 基于密集模式下的可见列，按 groupSize 进行合并
    */
   const getCellGroups = (values: ChartDataItem[], header: TableHeader) => {
@@ -215,6 +292,66 @@ export function useTableAxis(options: TableAxisOptions) {
       groups.push({
         text: String(values?.[chunk[0]]?.[header.value] || ''),
         width: denseColumnWidth.value * chunk.length
+      })
+    }
+    return groups
+  }
+
+  /**
+   * 基于按表头计算的配置，获取指定表头的合并单元格分组
+   */
+  const getHeaderCellGroups = (
+    configs: Record<string, HeaderColumnConfig>,
+    values: ChartDataItem[],
+    header: TableHeader
+  ) => {
+    const config = configs[header.value]
+    if (!config) return []
+
+    const denseWidth = config.denseColumnWidth
+    const denseCols = config.denseVisibleColumns
+
+    // 计算该 header 的 sparse 列宽（tilted 布局）
+    const layout = getHeaderLayout(header.value)
+    const angle = getHeaderTiltAngle(header.value)
+    const total = categoriesRef.value.length
+    const containerWidth = chartRef.value?.getDom()?.clientWidth || 0
+    const availableWidth =
+      tablePosition.width > 0
+        ? tablePosition.width * total
+        : containerWidth - tablePosition.marginLeft - 20
+
+    let rowMaxCellTextLength = 0
+    values.forEach((item) => {
+      const text = String(item[header.value] ?? '')
+      if (text.length > rowMaxCellTextLength) rowMaxCellTextLength = text.length
+    })
+
+    const sparseState = calculateColumnState({
+      enabled: true,
+      totalColumns: total,
+      originWidth: tablePosition.width,
+      containerWidth,
+      marginLeft: tablePosition.marginLeft,
+      maxTextLength: maxTextLength.value,
+      maxCellTextLength: rowMaxCellTextLength,
+      categoryLayout: 'tilted',
+      categoryTiltAngle: angle,
+      fontSize: textDivStyle.fontSize,
+      narrowMode: true
+    })
+
+    const size =
+      denseWidth > 0
+        ? Math.max(1, Math.round(sparseState.autoColumnWidth / denseWidth))
+        : 1
+
+    const groups: { text: string; width: number }[] = []
+    for (let i = 0; i < denseCols.length; i += size) {
+      const chunk = denseCols.slice(i, i + size)
+      groups.push({
+        text: String(values?.[chunk[0]]?.[header.value] || ''),
+        width: denseWidth * chunk.length
       })
     }
     return groups
@@ -306,6 +443,9 @@ export function useTableAxis(options: TableAxisOptions) {
     computeCellHeight,
     getRowHeight,
     buildRowHeights,
+    buildHeaderColumnConfigs,
+    getHeaderCellGroups,
+    maxTextLength,
     hideChartXAxis
   }
 }
