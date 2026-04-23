@@ -315,6 +315,48 @@ export const calculateLabelDisplay = (N: number, max: number): number[] => {
 }
 
 /**
+ * 判断字符是否为全角字符（CJK、全角标点、日文假名、韩文等）
+ */
+const isFullWidthChar = (char: string): boolean => {
+  const code = char.charCodeAt(0)
+  // CJK Unified Ideographs (常用汉字)
+  if (code >= 0x4e00 && code <= 0x9fff) return true
+  // CJK Unified Ideographs Extension A
+  if (code >= 0x3400 && code <= 0x4dbf) return true
+  // CJK Symbols and Punctuation
+  if (code >= 0x3000 && code <= 0x303f) return true
+  // Hiragana / Katakana
+  if (code >= 0x3040 && code <= 0x30ff) return true
+  // Fullwidth ASCII variants
+  if (code >= 0xff01 && code <= 0xff5e) return true
+  // Halfwidth Katakana
+  if (code >= 0xff65 && code <= 0xff9f) return true
+  // Hangul Syllables
+  if (code >= 0xac00 && code <= 0xd7af) return true
+  return false
+}
+
+/**
+ * 根据字符类型估算文本像素宽度
+ * - 中文/全角字符：按 fontSize 计算
+ * - 空格：按 fontSize * 0.3 计算
+ * - 其他半角字符（英文、数字、-、_、(、)、/ 等）：按 fontSize * 0.55 计算
+ */
+export const measureTextWidth = (text: string, fontSize: number): number => {
+  let totalWidth = 0
+  for (const char of text) {
+    if (char === ' ') {
+      totalWidth += fontSize * 0.3
+    } else if (isFullWidthChar(char)) {
+      totalWidth += fontSize
+    } else {
+      totalWidth += fontSize * 0.55
+    }
+  }
+  return totalWidth
+}
+
+/**
  * 根据文本内容、布局方式和容器宽度动态计算单元格样式
  * @param text - 单元格文本
  * @param width - 单元格宽度
@@ -332,8 +374,7 @@ export const getDynamicCellStyle = (
   fontSize: number,
   forcedHeight?: number
 ) => {
-  const charWidth = fontSize * 0.55
-  const textWidth = String(text).length * charWidth
+  const textWidth = measureTextWidth(String(text), fontSize)
   let contentHeight = fontSize
   if (layout === 'vertical') {
     contentHeight = textWidth

@@ -16,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import { measureTextWidth } from '@/utils/chart-util'
 import { computed } from 'vue'
 
 const props = withDefaults(
@@ -49,8 +50,7 @@ const props = withDefaults(
  */
 const containerStyle = computed(() => {
   if (props.layout === 'vertical') {
-    const charWidth = props.fontSize * 0.55
-    const textWidth = String(props.text).length * charWidth
+    const textWidth = measureTextWidth(String(props.text), props.fontSize)
     return {
       width: `${props.width}px`,
       height: `${textWidth}px`,
@@ -59,8 +59,7 @@ const containerStyle = computed(() => {
   }
 
   if (props.layout === 'tilted') {
-    const charWidth = props.fontSize * 0.55
-    const textWidth = String(props.text).length * charWidth
+    const textWidth = measureTextWidth(String(props.text), props.fontSize)
     const tiltRadian = (props.tiltAngle * Math.PI) / 180
     const verticalSpace = textWidth * Math.sin(tiltRadian)
     const extraHeight = Math.max(0, verticalSpace - props.width * 0.3)
