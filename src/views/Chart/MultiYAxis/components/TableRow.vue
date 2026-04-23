@@ -119,7 +119,7 @@ const visibleCells = computed(() => {
   }[] = []
   props.values.forEach((item, idx) => {
     if (!isCellVisible(idx)) return
-    const text = String(item?.[props.header.value] || '')
+    const text = String(item?.[props.header.value] ?? '')
     const extraStyle: Record<string, string | number> = isCategoryRow.value
       ? {}
       : {
