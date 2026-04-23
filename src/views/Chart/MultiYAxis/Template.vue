@@ -202,7 +202,7 @@ const statConfigs = ref<StatConfig[]>([
   {
     statFunc: 'categoryRow',
     orientation: 'vertical',
-    customAngle: 0,
+    customAngle: 45,
     format: undefined
   },
   {
