@@ -10,7 +10,6 @@
       :y-axis-list="computedYAxisList"
       :header-layouts="computedHeaderLayouts"
       :auto-interval="true"
-      :show-category-row="false"
       :isColorByMode="isColorByMode"
     />
     <el-dialog
@@ -196,9 +195,16 @@ const statFuncOptions = [
   'sum',
   'avg',
   'count',
-  'uniqueCount'
+  'uniqueCount',
+  'categoryRow'
 ]
 const statConfigs = ref<StatConfig[]>([
+  {
+    statFunc: 'categoryRow',
+    orientation: 'vertical',
+    customAngle: 0,
+    format: undefined
+  },
   {
     statFunc: 'sum',
     orientation: 'vertical',

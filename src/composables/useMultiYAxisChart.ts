@@ -144,13 +144,18 @@ export function useMultiYAxisChart(options: MultiYAxisChartOptions) {
       const values = baseValues.map((item) => {
         const obj: Record<string, unknown> = { name: item.name }
         headers.forEach((h) => {
-          const raw = (item[h.label] as number) ?? 0
-          // 为不同 Y 轴引入差异化数据，使折线不重叠
-          let val: number | string = Math.floor(raw * (1 + idx * 0.3)) + idx * 10
-          if (h.format !== undefined && h.format !== null) {
-            val = Number(val).toFixed(h.format)
+          if (h.label === 'categoryRow') {
+            obj[h.value] = String(item.name ?? '')
+          } else {
+            const raw = (item[h.label] as number) ?? 0
+            // 为不同 Y 轴引入差异化数据，使折线不重叠
+            let val: number | string =
+              Math.floor(raw * (1 + idx * 0.3)) + idx * 10
+            if (h.format !== undefined && h.format !== null) {
+              val = Number(val).toFixed(h.format)
+            }
+            obj[h.value] = val
           }
-          obj[h.value] = val
         })
         return obj
       })

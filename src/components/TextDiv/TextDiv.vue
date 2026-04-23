@@ -86,6 +86,7 @@ const getTextStyle = () => {
   if (props.layout === 'vertical') {
     const base: Record<string, string> = {
       width: `${props.height - 4}px`,
+      whiteSpace: 'nowrap',
       textAlign: 'center',
       position: 'absolute',
       top: '50%',
