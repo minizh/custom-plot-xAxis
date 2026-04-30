@@ -3,6 +3,7 @@ import CombinedXAxis from '../views/Chart/CombinedXAxis/Template.vue'
 import GroupXAxis from '../views/Chart/GroupXAxis/Template.vue'
 import MultiYAxis from '../views/Chart/MultiYAxis/Template.vue'
 import TableXAxis from '../views/Chart/TableXAxis/Template.vue'
+import RxjsDemo from '../views/RxjsDemo/index.vue'
 import Home from '../views/Home.vue'
 
 const routes = [
@@ -41,6 +42,12 @@ const routes = [
         name: 'MultiYAxis',
         component: MultiYAxis,
         meta: { title: '多Y轴' }
+      },
+      {
+        path: 'rxjs-demo',
+        name: 'RxjsDemo',
+        component: RxjsDemo,
+        meta: { title: 'RxJS消息总线' }
       }
     ]
   }
