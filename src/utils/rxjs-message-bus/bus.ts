@@ -69,7 +69,7 @@ class TopicChannel<TIn, TOut> {
 }
 
 /** 工程级消息总线 */
-export class MessageBus<TMap extends Record<string, TopicDefinition> = Record<string, TopicDefinition>> {
+export class MessageBus<TMap extends { [K in keyof TMap]: TopicDefinition } = Record<string, TopicDefinition>> {
   private topics = new Map<string, TopicChannel<unknown, unknown>>();
   private options: Required<BusOptions>;
   private gcTimer?: ReturnType<typeof setInterval>;
