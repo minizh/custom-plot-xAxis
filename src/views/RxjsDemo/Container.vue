@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed, onUnmounted, onMounted } from 'vue';
 import { provideMessageBus, usePublisher } from '@/utils/rxjs-message-bus';
 import { COLOR_MAP } from './mockChart';
 import ChartSlot from './ChartSlot.vue';
@@ -11,8 +11,28 @@ const chartConfigs = [
   { id: 'chart-user', title: '用户增长' },
 ];
 
+/* 延迟渲染演示配置 */
+const delayedConfig = { id: 'chart-delayed', title: '延迟加载（演示 ReplaySubject）' };
+const showDelayedChart = ref(false);
+
 /* 创建局部 Bus 实例：当前 Container 及其所有子孙组件共享，与其他 Container 完全隔离 */
 const bus = provideMessageBus();
+
+/* 初始化时立即发布默认图例状态（所有指标默认全选） */
+/* 由于 downstream 使用 ReplaySubject(1)，后续延迟渲染的子组件挂载后仍能立即收到此消息 */
+const defaultLegendState: Record<string, boolean> = {};
+Object.keys(COLOR_MAP).forEach((name) => {
+  defaultLegendState[name] = true;
+});
+bus.publish('chart:legend', { selectedMap: defaultLegendState });
+
+/* 2 秒后演示延迟渲染：子组件挂载后能立即收到缓存的历史消息 */
+onMounted(() => {
+  setTimeout(() => {
+    showDelayedChart.value = true;
+    console.log('[Container] 延迟图表已渲染，ReplaySubject 会自动向其同步之前发布的图例状态');
+  }, 2000);
+});
 
 /* 聚合状态 */
 const registeredSet = ref(new Set<string>());
@@ -64,10 +84,11 @@ const allReady = computed(() => registeredSet.value.size === chartConfigs.length
     <!-- 深层嵌套图表区 -->
     <div class="charts-grid">
       <ChartSlot v-for="c in chartConfigs" :key="c.id" :config="c" />
+      <ChartSlot v-if="showDelayedChart" :key="delayedConfig.id" :config="delayedConfig" />
     </div>
 
     <!-- 共享图例：所有子组件就绪后渲染 -->
-    <div v-if="allReady" class="shared-legend-panel">
+    <div class="shared-legend-panel">
       <h4>共享图例（点击切换全局显隐）</h4>
       <div class="legend-items">
         <span

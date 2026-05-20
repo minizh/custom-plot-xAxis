@@ -68,4 +68,6 @@ export interface BusOptions {
   gcInterval?: number;
   /** 下游消息是否共享（热广播），默认 true */
   shareDownstream?: boolean;
+  /** 下游消息缓存数量（ReplaySubject），默认 1。设为 0 则退化为普通 Subject */
+  replayCount?: number;
 }

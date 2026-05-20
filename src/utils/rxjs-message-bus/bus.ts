@@ -1,5 +1,5 @@
-import { Subject, Observable, firstValueFrom } from 'rxjs';
-import { share, filter, take } from 'rxjs/operators';
+import { Subject, Observable, firstValueFrom, ReplaySubject } from 'rxjs';
+import { filter, take } from 'rxjs/operators';
 import { nanoid } from 'nanoid';
 import type {
   BusMessage,
@@ -16,9 +16,9 @@ const generateId = () => nanoid(12);
 
 /** 单个 Topic 的双向通道 */
 class TopicChannel<TIn, TOut> {
-  /** 发布者广播流（热广播，共享给所有订阅者） */
+  /** 发布者广播流（热广播，共享给所有订阅者，支持 ReplaySubject 缓存） */
   readonly downstream$: Observable<BusMessage<TIn>>;
-  private _downstream = new Subject<BusMessage<TIn>>();
+  private _downstream: Subject<BusMessage<TIn>> | ReplaySubject<BusMessage<TIn>>;
 
   /** 订阅者反馈流 */
   readonly upstream$: Observable<BusMessage<TOut>>;
@@ -28,10 +28,13 @@ class TopicChannel<TIn, TOut> {
   subscriberCount = 0;
   hasPublisher = false;
 
-  constructor(shareDownstream = true) {
-    this.downstream$ = shareDownstream
-      ? this._downstream.pipe(share())
-      : this._downstream.asObservable();
+  constructor(replayCount = 1) {
+    if (replayCount > 0) {
+      this._downstream = new ReplaySubject<BusMessage<TIn>>(replayCount);
+    } else {
+      this._downstream = new Subject<BusMessage<TIn>>();
+    }
+    this.downstream$ = this._downstream.asObservable();
     this.upstream$ = this._upstream.asObservable();
   }
 
@@ -80,6 +83,7 @@ export class MessageBus<TMap extends { [K in keyof TMap]: TopicDefinition } = Re
       devLog: options.devLog ?? false,
       gcInterval: options.gcInterval ?? 30000,
       shareDownstream: options.shareDownstream ?? true,
+      replayCount: options.replayCount ?? 1,
     };
 
     // 启动空 Topic 垃圾回收（防止内存泄漏）
@@ -92,7 +96,7 @@ export class MessageBus<TMap extends { [K in keyof TMap]: TopicDefinition } = Re
   private ensureChannel<K extends keyof TMap>(topic: K): TopicChannel<TMap[K]['downstream'], TMap[K]['upstream']> {
     const key = topic as string;
     if (!this.topics.has(key)) {
-      this.topics.set(key, new TopicChannel(this.options.shareDownstream));
+      this.topics.set(key, new TopicChannel(this.options.replayCount));
     }
     return this.topics.get(key)! as TopicChannel<TMap[K]['downstream'], TMap[K]['upstream']>;
   }

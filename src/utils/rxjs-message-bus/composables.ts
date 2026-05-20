@@ -28,7 +28,10 @@ export const MessageBusKey: InjectionKey<MessageBus<AppTopicMap>> =
 let globalBus: MessageBus<AppTopicMap> | null = null
 
 export function createMessageBus() {
-  return new MessageBus<AppTopicMap>({ devLog: import.meta.env.DEV })
+  return new MessageBus<AppTopicMap>({
+    devLog: import.meta.env.DEV,
+    replayCount: 1
+  })
 }
 
 /** 安装全局 Bus（在 main.ts 调用） */

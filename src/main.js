@@ -21,6 +21,6 @@ app.use(ElementPlus)
 app.use(router)
 
 // 全局安装消息总线
-installMessageBus(app)
+// installMessageBus(app)
 
 app.mount('#app')

@@ -13,7 +13,7 @@ let chartInstance: echarts.ECharts | null = null;
 const { publish: registerChart } = usePublisher('chart:register');
 
 /* 2. 接收父组件图例指令（订阅者） */
-useSubscriber('chart:legend', (msg) => {
+const { latestMessage: latestLegend } = useSubscriber('chart:legend', (msg) => {
   if (!chartInstance) return;
   const { selectedMap } = msg.payload;
 
@@ -27,6 +27,15 @@ useSubscriber('chart:legend', (msg) => {
 });
 
 onMounted(async () => {
+  // 演示 ReplaySubject 效果：即使父组件在子组件挂载前已发布消息，
+  // latestLegend 仍能立即拿到缓存的最新值
+  if (latestLegend.value) {
+    console.log(
+      `[${props.chartId}] 挂载时立即收到缓存的图例状态（ReplaySubject）:`,
+      latestLegend.value.payload
+    );
+  }
+
   chartInstance = echarts.init(chartRef.value!);
   chartInstance.showLoading({ text: '数据请求中...' });
 
@@ -63,10 +72,28 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="chartRef" class="chart-core" />
+  <div class="chart-core-wrapper">
+    <div v-if="latestLegend" class="replay-badge">
+      ✓ 已自动同步历史图例状态（ReplaySubject）
+    </div>
+    <div ref="chartRef" class="chart-core" />
+  </div>
 </template>
 
 <style scoped>
+.chart-core-wrapper {
+  width: 100%;
+}
+.replay-badge {
+  font-size: 12px;
+  color: #67c23a;
+  background: #f0f9eb;
+  border: 1px solid #e1f3d8;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-bottom: 6px;
+  display: inline-block;
+}
 .chart-core {
   width: 100%;
   height: 280px;
